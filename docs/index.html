@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#121110">
+<meta name="color-scheme" content="dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Willrot">
+<meta name="description" content="Willrot — habit and goal consistency tracker.">
+<title>Willrot</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/icon-16.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
+<style>
+:root{
+  --bg:#121110; --surface:#1C1916; --surface-2:#231F1B; --border:#332E27;
+  --text:#F2EDE6; --text-2:#A39B91; --ember:#E2501C; --ash:#7A3228;
+  --ember-soft:rgba(226,80,28,.14); --ash-soft:rgba(122,50,40,.28);
+  --r:16px; --st:env(safe-area-inset-top,0px); --sb:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%;background:var(--bg)}
+body{background:var(--bg);color:var(--text);font-family:'Plus Jakarta Sans',system-ui,-apple-system,sans-serif;font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased;min-height:100vh;min-height:100dvh;overscroll-behavior-y:none}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+input,select,textarea{font:inherit;font-size:16px;color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:12px 14px;width:100%;outline:none;-webkit-appearance:none;appearance:none}
+select{background-image:linear-gradient(45deg,transparent 50%,var(--text-2) 50%),linear-gradient(135deg,var(--text-2) 50%,transparent 50%);background-position:calc(100% - 18px) 52%,calc(100% - 13px) 52%;background-size:5px 5px;background-repeat:no-repeat;padding-right:34px}
+input[type=date]{min-height:48px}
+textarea{resize:vertical;min-height:72px}
+input:focus,select:focus,textarea:focus{border-color:var(--ember)}
+input[type=checkbox]{width:auto}
+.hidden{display:none!important}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+.muted{color:var(--text-2)}
+.ember{color:var(--ember)}
+.small{font-size:13px}
+
+/* ---------- screens ---------- */
+.screen{display:none}
+.screen.active{display:block}
+#screen-loading.active,#screen-login.active{display:flex}
+#screen-loading{min-height:100dvh;align-items:center;justify-content:center;flex-direction:column;gap:18px}
+#screen-loading .logo{width:72px;height:72px;animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.55;transform:scale(.97)}50%{opacity:1;transform:scale(1)}}
+#screen-login{min-height:100dvh;align-items:center;justify-content:center;padding:calc(24px + var(--st)) 20px calc(24px + var(--sb))}
+.login-box{width:100%;max-width:380px}
+.login-box .logo{width:64px;height:64px;margin-bottom:20px}
+.login-box h1{font-size:30px;font-weight:800;letter-spacing:-.02em}
+.login-box p.tag{color:var(--text-2);margin:4px 0 28px}
+.field{display:block;margin-bottom:14px}
+.field>span{display:block;font-size:13px;font-weight:600;color:var(--text-2);margin:0 2px 6px}
+.msg{font-size:14px;margin:12px 2px 0;min-height:20px}
+.msg.err{color:#E58A73}
+.msg.ok{color:var(--text-2)}
+.linkbtn{color:var(--text-2);font-size:14px;padding:8px 2px;text-decoration:underline;text-underline-offset:3px}
+
+/* ---------- app shell ---------- */
+.wrap{max-width:560px;margin:0 auto}
+.topbar{position:sticky;top:0;z-index:20;background:rgba(18,17,16,.88);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);padding:calc(10px + var(--st)) 16px 10px;border-bottom:1px solid transparent}
+.topbar .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:34px}
+.brand{display:flex;align-items:center;gap:9px;font-weight:800;font-size:17px;letter-spacing:-.01em}
+.brand svg{width:24px;height:24px}
+.sync{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text-2);padding:6px 8px;border-radius:10px}
+.sync i{width:7px;height:7px;border-radius:50%;background:var(--border)}
+.sync.syncing i{background:var(--ember);animation:pulse 1s infinite}
+.sync.pending i,.sync.offline i,.sync.error i{background:var(--ash)}
+#view{padding:8px 16px calc(96px + var(--sb))}
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(28,25,22,.94);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top:1px solid var(--border);padding-bottom:var(--sb)}
+.nav .wrap{display:grid;grid-template-columns:repeat(4,1fr)}
+.nav a{display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 0 9px;font-size:11px;font-weight:600;color:var(--text-2)}
+.nav a svg{width:22px;height:22px}
+.nav a.on{color:var(--ember)}
+
+/* ---------- components ---------- */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px}
+.card+.card{margin-top:12px}
+.list{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.sec{display:flex;align-items:center;justify-content:space-between;margin:26px 4px 10px}
+.sec h2{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--text-2);font-weight:700}
+.sec .act{font-size:13px;font-weight:700;color:var(--ember)}
+h1.page{font-size:26px;font-weight:800;letter-spacing:-.02em;margin:10px 2px 2px}
+.sub{color:var(--text-2);font-size:14px;margin:0 2px}
+.back{display:inline-flex;align-items:center;gap:4px;color:var(--text-2);font-weight:600;font-size:14px;padding:8px 0}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--ember);color:#fff;border-radius:12px;padding:13px 18px;font-weight:700;font-size:15px;width:100%;transition:opacity .15s}
+.btn:active{opacity:.8}
+.btn[disabled]{opacity:.5}
+.btn.ghost{background:transparent;border:1px solid var(--border);color:var(--text)}
+.btn.danger{background:transparent;border:1px solid var(--ash);color:#E58A73}
+.btn.sm{width:auto;padding:9px 14px;font-size:14px;border-radius:10px}
+.btns{display:flex;gap:10px;margin-top:14px}
+.btns>*{flex:1}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;font-size:12px;font-weight:600;background:var(--surface-2);border:1px solid var(--border);color:var(--text-2)}
+.chip.on{background:var(--ember-soft);border-color:var(--ember);color:var(--text)}
+.chip.ash{background:var(--ash-soft);border-color:var(--ash);color:#E9B3A6}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+button.chip{font-size:14px;padding:8px 13px}
+.seg{display:flex;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:3px;gap:3px}
+.seg button{flex:1;padding:9px 8px;border-radius:9px;font-size:14px;font-weight:600;color:var(--text-2)}
+.seg button.on{background:var(--surface-2);color:var(--text);box-shadow:inset 0 0 0 1px var(--border)}
+.bar{height:6px;border-radius:99px;background:var(--surface-2);overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--ember);border-radius:99px}
+.bar.ash>i{background:var(--ash)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px}
+.stat b{display:block;font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;line-height:1.15}
+.stat span{font-size:12px;color:var(--text-2);font-weight:600}
+.empty{text-align:center;padding:28px 18px}
+.empty h3{font-size:17px;margin-bottom:6px}
+.empty p{color:var(--text-2);font-size:14px;margin-bottom:16px}
+.hint{font-size:12.5px;color:var(--text-2);margin:-6px 2px 14px}
+
+/* ---------- today ---------- */
+.hero{text-align:center;padding:22px 8px 8px}
+.hero .date{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-2)}
+.hero .num{font-family:'JetBrains Mono',ui-monospace,monospace;font-weight:800;font-size:104px;line-height:1;letter-spacing:-.04em;color:var(--ember);margin:14px 0 6px;font-variant-numeric:tabular-nums}
+.hero .num.zero{color:var(--text-2)}
+.hero .label{font-size:15px;font-weight:700}
+.hero .best{font-size:13px;color:var(--text-2);margin-top:3px}
+.today-prog{margin-top:20px}
+.today-prog .line{display:flex;justify-content:space-between;align-items:baseline;margin:0 2px 8px;font-weight:700}
+.today-prog .line span:last-child{color:var(--text-2);font-weight:600;font-size:13px}
+.segs{display:flex;gap:4px}
+.segs i{flex:1;height:8px;border-radius:99px;background:var(--surface-2);border:1px solid var(--border)}
+.segs i.on{background:var(--ember);border-color:var(--ember)}
+
+.row{display:flex;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid var(--border);min-height:62px}
+.row:first-child{border-top:0}
+.row-main{flex:1;min-width:0}
+.row-title{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-meta{font-size:12.5px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row.dim .row-title{color:var(--text-2)}
+.chev{color:var(--text-2);font-size:20px;line-height:1;padding-left:4px}
+.check{flex:none;width:34px;height:34px;border-radius:50%;border:2px solid var(--border);display:grid;place-items:center;transition:background .15s,border-color .15s}
+.check svg{width:16px;height:16px;opacity:0;transition:opacity .15s}
+.check.on{background:var(--ember);border-color:var(--ember)}
+.check.on svg{opacity:1}
+.qty{flex:none;min-width:58px;height:34px;padding:0 10px;border-radius:999px;border:2px solid var(--border);display:flex;align-items:baseline;justify-content:center;gap:1px;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px}
+.qty small{color:var(--text-2);font-size:11px}
+.qty.on{background:var(--ember);border-color:var(--ember)}
+.qty.on small{color:rgba(255,255,255,.75)}
+.qty.part{border-color:var(--ember)}
+.wk{flex:none;display:flex;gap:3px}
+.wk i{width:8px;height:20px;border-radius:99px;background:var(--surface-2);border:1px solid var(--border)}
+.wk i.on{background:var(--ember);border-color:var(--ember)}
+.banner{display:flex;gap:12px;align-items:center;margin-top:16px;background:var(--ember-soft);border:1px solid rgba(226,80,28,.45);border-radius:var(--r);padding:12px 14px}
+.banner p{flex:1;font-size:13.5px}
+.banner p b{display:block;font-size:14.5px}
+.banner .x{color:var(--text-2);font-size:20px;padding:0 4px}
+
+/* ---------- heatmap ---------- */
+.hm-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px;scrollbar-width:none}
+.hm-scroll::-webkit-scrollbar{display:none}
+.hm-wrap{display:flex;gap:6px;width:max-content}
+.hm-days{display:grid;grid-template-rows:14px repeat(7,13px);gap:3px;font-size:9.5px;color:var(--text-2);padding-right:2px}
+.hm-days span{line-height:13px}
+.hm-col{display:grid;grid-template-rows:14px repeat(7,13px);gap:3px}
+.hm-col .m{font-size:9.5px;color:var(--text-2);white-space:nowrap;width:13px;overflow:visible}
+.c{width:13px;height:13px;border-radius:3px;background:var(--surface-2)}
+.c.rest{background:#1F1C19;box-shadow:inset 0 0 0 1px #2A2621}
+.c.miss{background:var(--ash)}
+.c.on{background:var(--ember)}
+.c.pend{background:transparent;box-shadow:inset 0 0 0 1.5px var(--ember)}
+.c.void{background:transparent}
+.c.today{outline:1.5px solid var(--text);outline-offset:1px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--text-2);margin-top:12px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend .c{display:inline-block}
+
+/* ---------- charts ---------- */
+.vbars{display:flex;align-items:flex-end;gap:8px;height:150px;padding-top:18px}
+.vbar{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end}
+.vbar .col{width:100%;max-width:38px;border-radius:7px 7px 3px 3px;background:var(--surface-2);position:relative;min-height:3px}
+.vbar .col.ember{background:var(--ember)}
+.vbar .col.ash{background:var(--ash)}
+.vbar .col.mid{background:#5C4A3C}
+.vbar .v{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-2)}
+.vbar .l{font-size:11.5px;color:var(--text-2);font-weight:600}
+.hbars .hb{margin-top:12px}
+.hbars .hb:first-child{margin-top:0}
+.hb .top{display:flex;justify-content:space-between;font-size:14px;margin-bottom:6px;gap:10px}
+.hb .top span:first-child{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hb .top span:last-child{font-family:'JetBrains Mono',monospace;color:var(--text-2);font-size:13px}
+.chart svg{width:100%;height:auto;display:block}
+.insight-line{font-size:14px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)}
+.eo{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.eo .stat b{font-size:28px}
+.eo .stat .bar{margin-top:10px}
+.mlog{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid var(--border);font-size:14px}
+.mlog:first-child{border-top:0}
+.mlog button{color:var(--text-2);padding:2px 8px;font-size:18px}
+
+/* ---------- sheet ---------- */
+.backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:50;opacity:0;pointer-events:none;transition:opacity .2s}
+.backdrop.open{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:60;max-height:92dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--surface);border-top:1px solid var(--border);border-radius:22px 22px 0 0;padding:10px 18px calc(22px + var(--sb));transform:translateY(105%);transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+.sheet.open{transform:none}
+.sheet .grab{width:38px;height:5px;border-radius:9px;background:var(--border);margin:0 auto 14px}
+.sheet h3{font-size:20px;font-weight:800;margin-bottom:16px;letter-spacing:-.01em}
+.sheet .inner{max-width:560px;margin:0 auto}
+.fs{border:1px dashed var(--border);border-radius:14px;padding:14px;margin:6px 0 14px}
+.fs legend{font-size:13px;font-weight:700;color:var(--text-2);padding:0 6px}
+.stepper{display:flex;align-items:center;gap:10px;margin:6px 0 16px}
+.stepper button{width:52px;height:52px;border-radius:14px;border:1px solid var(--border);font-size:24px;font-weight:700;flex:none}
+.stepper input{text-align:center;font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;height:52px}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:6px 2px 14px;font-weight:600}
+.toggle-row input{width:22px;height:22px;accent-color:var(--ember);-webkit-appearance:checkbox;appearance:auto}
+.toast{position:fixed;left:50%;bottom:calc(84px + var(--sb));transform:translateX(-50%) translateY(20px);background:var(--text);color:var(--bg);font-weight:600;font-size:14px;padding:10px 16px;border-radius:12px;z-index:80;opacity:0;pointer-events:none;transition:all .2s;max-width:calc(100% - 32px)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<!-- 1. Loading / auth check -->
+<div id="screen-loading" class="screen active" aria-live="polite">
+  <svg class="logo" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="22" fill="#1C1916"/><clipPath id="lp1"><rect x="41.5" y="19" width="17" height="62" rx="8.5"/></clipPath><g clip-path="url(#lp1)"><rect x="40" y="18" width="20" height="32" fill="#E2501C"/><rect x="40" y="50" width="20" height="32" fill="#7A3228"/></g></svg>
+  <div class="muted small">Loading…</div>
+</div>
+
+<!-- 2. Login -->
+<div id="screen-login" class="screen">
+  <div class="login-box">
+    <svg class="logo" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="22" fill="#1C1916"/><clipPath id="lp2"><rect x="41.5" y="19" width="17" height="62" rx="8.5"/></clipPath><g clip-path="url(#lp2)"><rect x="40" y="18" width="20" height="32" fill="#E2501C"/><rect x="40" y="50" width="20" height="32" fill="#7A3228"/></g></svg>
+    <h1 id="login-title">Welcome back</h1>
+    <p class="tag">Consistency, counted.</p>
+    <form id="login-form" novalidate>
+      <label class="field"><span>Email</span><input type="email" name="email" autocomplete="email" required inputmode="email" autocapitalize="off"></label>
+      <label class="field"><span>Password</span><input type="password" name="password" autocomplete="current-password" required minlength="6"></label>
+      <button class="btn" type="submit" id="login-submit">Sign in</button>
+      <div class="msg" id="login-msg"></div>
+    </form>
+    <div style="display:flex;justify-content:space-between;margin-top:6px">
+      <button class="linkbtn" id="login-mode">Create an account</button>
+      <button class="linkbtn" id="login-forgot">Forgot password?</button>
+    </div>
+  </div>
+</div>
+
+<!-- App -->
+<div id="screen-app" class="screen">
+  <header class="topbar"><div class="wrap">
+    <div class="brand"><svg viewBox="0 0 100 100" aria-hidden="true"><clipPath id="lp3"><rect x="38" y="12" width="24" height="76" rx="12"/></clipPath><g clip-path="url(#lp3)"><rect x="36" y="10" width="28" height="40" fill="#E2501C"/><rect x="36" y="50" width="28" height="40" fill="#7A3228"/></g></svg>Willrot</div>
+    <button class="sync" id="sync" data-act="refresh" aria-label="Sync now"><i></i><span id="sync-label"></span></button>
+  </div></header>
+  <main id="view" class="wrap"></main>
+  <nav class="nav"><div class="wrap">
+    <a href="#/today" data-tab="today"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.6 2.6L16 9.6"/></svg>Today</a>
+    <a href="#/goals" data-tab="goals"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>Goals</a>
+    <a href="#/insights" data-tab="insights"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V12M10 20V5M15 20v-9M20 20v-5"/></svg>Insights</a>
+    <a href="#/settings" data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Manage</a>
+  </div></nav>
+</div>
+
+<div class="backdrop" id="backdrop"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true"><div class="grab"></div><div class="inner" id="sheet-body"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   Config
+   ============================================================ */
+const APP_VERSION = '1.0.0'; // bump on every deploy (also bump VERSION in sw.js)
+const SUPABASE_URL = 'https://rhfomdlzvwemtuczlwgu.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJoZm9tZGx6dndlbXR1Y3psd2d1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA4Njk3NTIsImV4cCI6MjEwNjQ0NTc1Mn0.2nAbsOgn4IQ3xQCUVanwbnBAI1k3h66ssnfI12SQb8M';
+const VAPID_PUBLIC_KEY = 'BHvqJ5md8shrnY0eTAUQFk2JrmLy3w7d5VMPW4UZFsWWUzINGIC40D0HfkqAJFirlWgqPi_KlHsYL0DCudJ4gYE';
+const PUSH_FN_URL = SUPABASE_URL + '/functions/v1/send-reminders';
+
+/* --- cache-busting: iOS PWAs hold on to old builds; force a clean reload on version change --- */
+(function checkVersion() {
+  try {
+    const prev = localStorage.getItem('willrot_app_version');
+    localStorage.setItem('willrot_app_version', APP_VERSION);
+    if (prev && prev !== APP_VERSION) {
+      window.__reloading = true;
+      // Clear caches but keep the SW registration (push subscriptions live on it)
+      const go = () => location.reload();
+      if ('caches' in window) caches.keys().then(ks => Promise.all(ks.map(k => caches.delete(k)))).then(go, go);
+      else go();
+    }
+  } catch (e) {}
+})();
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: 'willrot-auth' }
+});
+
+/* ============================================================
+   Utilities
+   ============================================================ */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const NF = new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 });
+const fmtNum = v => (v === null || v === undefined || v === '' || isNaN(+v)) ? '–' : NF.format(+v);
+const pct = r => r === null || r === undefined ? '–' : Math.round(r * 100) + '%';
+const clamp01 = x => Math.max(0, Math.min(1, x));
+const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+
+const DAY = 86400000;
+const pad = n => String(n).padStart(2, '0');
+const localDateStr = (d = new Date()) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const dnum = s => { const [y, m, d] = s.split('-').map(Number); return Math.round(Date.UTC(y, m - 1, d) / DAY); };
+const dstr = n => { const d = new Date(n * DAY); return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`; };
+const wd = n => (((n % 7) + 7 + 4) % 7);            // 0 = Sunday (1970-01-01 was a Thursday)
+const weekStart = n => n - ((wd(n) + 6) % 7);        // Monday-based weeks
+const todayN = () => dnum(localDateStr());
+const ymOf = n => { const d = new Date(n * DAY); return [d.getUTCFullYear(), d.getUTCMonth()]; };
+const monthStart = (y, m) => Math.round(Date.UTC(y, m, 1) / DAY);
+const monthEnd = (y, m) => Math.round(Date.UTC(y, m + 1, 0) / DAY);
+const fmtDay = (n, o = { month: 'short', day: 'numeric' }) => new Date(n * DAY).toLocaleDateString(undefined, { ...o, timeZone: 'UTC' });
+const fmtMonth = (y, m, long) => new Date(Date.UTC(y, m, 1)).toLocaleDateString(undefined, { month: long ? 'long' : 'short', ...(long ? { year: 'numeric' } : {}), timeZone: 'UTC' });
+const WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const WD_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const WD_ORDER = [1, 2, 3, 4, 5, 6, 0];
+const noonISO = n => { const [y, m, d] = dstr(n).split('-').map(Number); return new Date(y, m - 1, d, 12).toISOString(); };
+
+function toast(msg, ms = 2600) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), ms);
+}
+const isNetErr = e => !navigator.onLine || /fetch|network|load failed|timed? ?out/i.test(e?.message || String(e));
+const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+
+/* ============================================================
+   State, cache, offline outbox
+   ============================================================ */
+const S = { user: null, goals: [], metrics: [], metricLogs: [], habits: [], habitGoals: [], logs: [] };
+let IDX = new Map();   // habit_id -> Map(date -> log)
+let START = new Map(); // habit_id -> local start day number
+let OUTBOX = {};       // "habit_id|date" -> {type:'upsert', row} | {type:'delete', habit_id, date}
+const UI = { goalFilter: 'active', insWin: 90, showArchived: false };
+
+const cacheKey = () => 'willrot_cache_' + S.user.id;
+const outboxKey = () => 'willrot_outbox_' + S.user.id;
+
+function reindex() {
+  IDX = new Map();
+  for (const l of S.logs) { let m = IDX.get(l.habit_id); if (!m) IDX.set(l.habit_id, m = new Map()); m.set(l.date, l); }
+  START = new Map(S.habits.map(h => [h.id, dnum(localDateStr(new Date(h.created_at)))]));
+}
+function saveCache() { const { user, ...d } = S; lsSet(cacheKey(), d); }
+function loadCache() { Object.assign(S, lsGet(cacheKey(), {})); OUTBOX = lsGet(outboxKey(), {}); applyOutbox(); reindex(); }
+function saveOutbox() { lsSet(outboxKey(), OUTBOX); }
+function applyOutbox() {
+  for (const [k, op] of Object.entries(OUTBOX)) {
+    const [hid, date] = k.split('|');
+    S.logs = S.logs.filter(l => !(l.habit_id === hid && l.date === date));
+    if (op.type === 'upsert') S.logs.push(op.row);
+  }
+}
+
+async function fetchAll(table, select, orders) {
+  const out = []; const size = 1000;
+  for (let from = 0; ; from += size) {
+    let q = sb.from(table).select(select);
+    for (const o of orders) q = q.order(o, { ascending: true });
+    const { data, error } = await q.range(from, from + size - 1);
+    if (error) throw error;
+    out.push(...data);
+    if (data.length < size) return out;
+  }
+}
+
+let refreshing = null, lastRefresh = 0;
+function refresh() {
+  if (refreshing) return refreshing;
+  refreshing = (async () => {
+    if (!navigator.onLine) { setSync('offline'); return; }
+    setSync('syncing');
+    try {
+      await flush();
+      const [goals, metrics, metricLogs, habits, habitGoals, logs] = await Promise.all([
+        fetchAll('goals', '*', ['created_at', 'id']),
+        fetchAll('goal_metrics', '*', ['created_at', 'id']),
+        fetchAll('goal_metric_logs', '*', ['logged_at', 'id']),
+        fetchAll('habits', '*', ['created_at', 'id']),
+        fetchAll('habit_goals', 'habit_id,goal_id', ['habit_id', 'goal_id']),
+        fetchAll('habit_logs', 'habit_id,date,completed,value,logged_at', ['date', 'id']),
+      ]);
+      Object.assign(S, { goals, metrics, metricLogs, habits, habitGoals, logs });
+      applyOutbox(); reindex(); saveCache(); render();
+      lastRefresh = Date.now();
+      setSync(Object.keys(OUTBOX).length ? 'pending' : 'ok');
+    } catch (e) {
+      console.error(e); setSync(isNetErr(e) ? 'offline' : 'error');
+    }
+  })().finally(() => { refreshing = null; });
+  return refreshing;
+}
+
+let flushing = false;
+async function flush() {
+  if (flushing || !navigator.onLine) return;
+  flushing = true;
+  try {
+    for (const [k, op] of Object.entries(OUTBOX)) {
+      const r = op.type === 'upsert'
+        ? await sb.from('habit_logs').upsert(op.row, { onConflict: 'habit_id,date' })
+        : await sb.from('habit_logs').delete().eq('habit_id', op.habit_id).eq('date', op.date);
+      if (r.error) {
+        if (isNetErr(r.error)) break;
+        console.error('dropping op', op, r.error); toast('Could not save a check-in: ' + r.error.message);
+      }
+      if (OUTBOX[k] === op) delete OUTBOX[k];
+    }
+  } finally {
+    saveOutbox(); flushing = false;
+    setSync(!navigator.onLine ? 'offline' : Object.keys(OUTBOX).length ? 'pending' : 'ok');
+  }
+}
+
+function setSync(state) {
+  const el = $('#sync'); if (!el) return;
+  el.className = 'sync ' + state;
+  $('#sync-label').textContent = { syncing: 'Syncing', offline: 'Offline', pending: 'Unsynced', error: 'Sync error', ok: '' }[state] || '';
+}
+
+/** Write (or clear) a habit check-in. Works offline: local state first, outbox second. */
+function setLog(h, n, { completed, value }) {
+  const date = dstr(n), key = h.id + '|' + date;
+  S.logs = S.logs.filter(l => !(l.habit_id === h.id && l.date === date));
+  const empty = !completed && (value === null || value === undefined || +value === 0);
+  if (empty) OUTBOX[key] = { type: 'delete', habit_id: h.id, date };
+  else {
+    const row = { habit_id: h.id, date, completed: !!completed, value: value === null || value === undefined ? null : +value, logged_at: new Date().toISOString() };
+    S.logs.push(row); OUTBOX[key] = { type: 'upsert', row };
+  }
+  saveOutbox(); reindex(); saveCache(); render();
+  navigator.vibrate?.(8);
+  flush();
+}
+
+/* ============================================================
+   Scheduling + streak logic
+   ============================================================ */
+const hStart = h => START.get(h.id) ?? dnum(localDateStr(new Date(h.created_at)));
+const cfg = h => h.cadence_config || {};
+const isWeekly = h => h.cadence_type === 'n_per_week';
+const weeklyN = h => Math.max(1, Math.min(7, +cfg(h).n || 1));
+const habitById = id => S.habits.find(h => h.id === id);
+const goalById = id => S.goals.find(g => g.id === id);
+
+function isDue(h, n) {
+  const s = hStart(h);
+  if (n < s) return false;
+  switch (h.cadence_type) {
+    case 'daily': return true;
+    case 'every_n_days': return (n - s) % Math.max(1, +cfg(h).n || 1) === 0;
+    case 'specific_weekdays': return (cfg(h).days || []).map(Number).includes(wd(n));
+    default: return false; // n_per_week is not day-based
+  }
+}
+const getLog = (h, n) => IDX.get(h.id)?.get(dstr(n));
+function isDone(h, log) {
+  if (!log) return false;
+  if (h.type === 'quantity') { const t = +h.target_value || 0; const v = +log.value || 0; return t > 0 ? v >= t : v > 0; }
+  return !!log.completed;
+}
+const doneOn = (h, n) => isDone(h, getLog(h, n));
+const progressOn = (h, n) => {
+  const l = getLog(h, n); if (!l) return 0;
+  if (h.type !== 'quantity') return l.completed ? 1 : 0;
+  const t = +h.target_value || 0; return t > 0 ? clamp01((+l.value || 0) / t) : (+l.value > 0 ? 1 : 0);
+};
+function countRange(h, a, b) { let c = 0; for (let n = a; n <= b; n++) if (doneOn(h, n)) c++; return c; }
+const weekCount = (h, ws) => countRange(h, ws, Math.min(ws + 6, todayN()));
+
+/** Consecutive scheduled periods completed, newest first. An unfinished today never breaks it. */
+function habitStreak(h) {
+  const t = todayN(), s = hStart(h);
+  if (isWeekly(h)) {
+    const N = weeklyN(h); let ws = weekStart(t), streak = 0;
+    if (weekCount(h, ws) >= N) streak++;        // current week counts once met; never breaks while in progress
+    for (ws -= 7; ws + 6 >= s; ws -= 7) {
+      const need = Math.min(N, ws + 6 - Math.max(ws, s) + 1); // first partial week: pro-rate
+      if (countRange(h, ws, ws + 6) >= need) streak++; else break;
+    }
+    return streak;
+  }
+  let streak = 0;
+  for (let n = t; n >= s; n--) {
+    if (!isDue(h, n)) continue;
+    if (doneOn(h, n)) streak++;
+    else if (n === t) continue;
+    else break;
+  }
+  return streak;
+}
+function bestStreak(h) {
+  const t = todayN(), s = hStart(h); let best = 0, cur = 0;
+  if (isWeekly(h)) {
+    const N = weeklyN(h);
+    for (let ws = weekStart(s); ws <= t; ws += 7) {
+      const need = Math.min(N, ws + 6 - Math.max(ws, s) + 1);
+      if (countRange(h, ws, Math.min(ws + 6, t)) >= need) best = Math.max(best, ++cur);
+      else if (ws + 6 < t) cur = 0;
+    }
+    return best;
+  }
+  for (let n = s; n <= t; n++) {
+    if (!isDue(h, n)) continue;
+    if (doneOn(h, n)) best = Math.max(best, ++cur); else if (n !== t) cur = 0;
+  }
+  return best;
+}
+
+const dayHabits = () => S.habits.filter(h => !h.archived && !isWeekly(h));
+/** A day is perfect when every day-based habit due that day was completed. Days with nothing due are neutral. */
+function perfectDays() {
+  const hs = dayHabits(); if (!hs.length) return { current: 0, best: 0 };
+  const t = todayN(), minS = Math.min(...hs.map(hStart));
+  const perfect = n => { const due = hs.filter(h => isDue(h, n)); return due.length ? due.every(h => doneOn(h, n)) : null; };
+  let current = 0;
+  for (let n = t - 1; n >= minS; n--) { const p = perfect(n); if (p === null) continue; if (p) current++; else break; }
+  let best = 0, run = 0;
+  for (let n = minS; n <= t - 1; n++) { const p = perfect(n); if (p === null) continue; if (p) best = Math.max(best, ++run); else run = 0; }
+  return { current, best: Math.max(best, current) };
+}
+
+/** Completion rate of a set of habits over [from, to]. Today counts only if done; weekly habits are pro-rated. */
+function rate(hs, from, to) {
+  const t = todayN(); let due = 0, done = 0;
+  for (const h of hs) {
+    const s = hStart(h), a = Math.max(from, s), b = Math.min(to, t);
+    if (a > b) continue;
+    if (isWeekly(h)) {
+      const N = weeklyN(h);
+      for (let ws = weekStart(a); ws <= b; ws += 7) {
+        const lo = Math.max(ws, a), hi = Math.min(ws + 6, b); if (lo > hi) continue;
+        const req = N * (hi - lo + 1) / 7, c = Math.min(countRange(h, lo, hi), req);
+        if (ws + 6 >= t && c < req) { due += c; done += c; continue; } // current week still in progress
+        due += req; done += c;
+      }
+    } else {
+      for (let n = a; n <= b; n++) {
+        if (!isDue(h, n)) continue;
+        const d = doneOn(h, n);
+        if (n === t && !d) continue;
+        due++; if (d) done++;
+      }
+    }
+  }
+  return due ? done / due : null;
+}
+
+function cadenceLabel(h) {
+  const c = cfg(h);
+  switch (h.cadence_type) {
+    case 'daily': return 'Every day';
+    case 'every_n_days': return `Every ${+c.n || 1} days`;
+    case 'specific_weekdays': return WD_ORDER.filter(d => (c.days || []).map(Number).includes(d)).map(d => WD[d]).join(', ') || 'No days set';
+    case 'n_per_week': return `${weeklyN(h)}× per week`;
+  }
+  return '';
+}
+const streakUnit = h => isWeekly(h) ? 'wk' : h.cadence_type === 'daily' ? 'd' : '×';
+
+/* ============================================================
+   Goals helpers
+   ============================================================ */
+const goalFrom = g => g.start_date ? dnum(g.start_date) : dnum(localDateStr(new Date(g.created_at)));
+const goalTo = g => g.end_date ? dnum(g.end_date) : null;
+const linkedHabits = g => S.habitGoals.filter(x => x.goal_id === g.id).map(x => habitById(x.habit_id)).filter(Boolean);
+const goalIdsOf = h => S.habitGoals.filter(x => x.habit_id === h.id).map(x => x.goal_id);
+const metricsOf = g => S.metrics.filter(m => m.goal_id === g.id);
+const logsOf = m => S.metricLogs.filter(l => l.goal_metric_id === m.id).sort((a, b) => a.logged_at.localeCompare(b.logged_at));
+function metricProgress(m) {
+  const logs = logsOf(m); if (!logs.length) return { current: null, p: null };
+  const current = +logs[logs.length - 1].value;
+  const start = m.start_value !== null && m.start_value !== undefined ? +m.start_value : +logs[0].value;
+  const target = m.target_value !== null && m.target_value !== undefined ? +m.target_value : null;
+  if (target === null || target === start) return { current, p: null };
+  return { current, p: clamp01((current - start) / (target - start)) };
+}
+const goalEffort = g => { const t = todayN(); const to = goalTo(g); return rate(linkedHabits(g), goalFrom(g), to === null ? t : Math.min(to, t)); };
+function timeframeLabel(g) {
+  const f = g.start_date ? fmtDay(dnum(g.start_date), { month: 'short', day: 'numeric', year: 'numeric' }) : null;
+  const e = g.end_date ? fmtDay(dnum(g.end_date), { month: 'short', day: 'numeric', year: 'numeric' }) : null;
+  const kind = { yearly: 'Yearly', quarterly: 'Quarterly', custom: 'Custom' }[g.timeframe_type] || '';
+  return [kind, f && e ? `${f} – ${e}` : f ? `from ${f}` : e ? `until ${e}` : ''].filter(Boolean).join(' · ');
+}
+function elapsed(g) {
+  const to = goalTo(g); if (to === null) return null;
+  const from = goalFrom(g), t = todayN();
+  return { p: clamp01((Math.min(t, to) - from + 1) / (to - from + 1)), day: Math.max(0, Math.min(t, to) - from + 1), total: to - from + 1 };
+}
+
+/* ============================================================
+   Rendering
+   ============================================================ */
+const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+
+function route() {
+  const [name, id] = (location.hash.replace(/^#\/?/, '') || 'today').split('/');
+  return { name, id };
+}
+function render() {
+  if (!S.user) return;
+  const r = route();
+  const tab = { habit: 'today', goal: 'goals' }[r.name] || r.name;
+  $$('.nav a').forEach(a => a.classList.toggle('on', a.dataset.tab === tab));
+  const views = { today: viewToday, goals: viewGoals, goal: viewGoal, habit: viewHabit, insights: viewInsights, settings: viewSettings };
+  const v = views[r.name] || viewToday;
+  $('#view').innerHTML = v(r.id);
+  $$('.hm-scroll').forEach(el => { el.scrollLeft = el.scrollWidth; });
+  if (r.name === 'today') fillTodayBanner();
+  if (r.name === 'settings') fillPushCard();
+}
+
+/* ---------- Today ---------- */
+function viewToday() {
+  const t = todayN();
+  const active = S.habits.filter(h => !h.archived);
+  const dayHs = active.filter(h => !isWeekly(h));
+  const weekly = active.filter(isWeekly);
+  const due = dayHs.filter(h => isDue(h, t));
+  const notDue = dayHs.filter(h => !isDue(h, t));
+  const done = due.filter(h => doneOn(h, t)).length;
+  const { current, best } = perfectDays();
+  const dateLine = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+
+  let html = `<section class="hero">
+    <div class="date">${esc(dateLine)}</div>
+    <div class="num ${current ? '' : 'zero'}" aria-label="${current} perfect days">${current}</div>
+    <div class="label">${current === 1 ? 'perfect day' : 'perfect days'} in a row</div>
+    <div class="best">${best > current ? `Best ${best} · ` : ''}today counts once it's over</div>
+  </section>`;
+
+  if (!active.length) {
+    return html + `<div id="today-banner"></div><div class="card empty" style="margin-top:20px">
+      <h3>Nothing to track yet</h3><p>Add your first habit — and optionally a goal it serves.</p>
+      <button class="btn" data-act="new-habit">Add a habit</button>
+      <button class="btn ghost" style="margin-top:10px" data-act="new-goal">Add a goal</button></div>`;
+  }
+
+  html += `<div class="today-prog">
+    <div class="line"><span>${due.length ? `${done}/${due.length} done today` : 'Nothing due today'}</span><span>${due.length && done === due.length ? 'All clear' : ''}</span></div>
+    ${due.length ? `<div class="segs">${due.map(h => `<i class="${doneOn(h, t) ? 'on' : ''}"></i>`).join('')}</div>` : ''}
+  </div><div id="today-banner"></div>`;
+
+  if (due.length) html += `<div class="sec"><h2>Due today</h2></div><div class="list">${due.map(h => habitRow(h, t)).join('')}</div>`;
+  if (weekly.length) html += `<div class="sec"><h2>This week</h2></div><div class="list">${weekly.map(h => habitRow(h, t)).join('')}</div>`;
+  if (notDue.length) html += `<div class="sec"><h2>Not scheduled today</h2></div><div class="list">${notDue.map(h => habitRow(h, t, true)).join('')}</div>`;
+  return html;
+}
+
+function habitRow(h, n, dim) {
+  const log = getLog(h, n), done = isDone(h, log);
+  let ctl;
+  if (h.type === 'quantity') {
+    const v = +log?.value || 0;
+    ctl = `<button class="qty ${done ? 'on' : v > 0 ? 'part' : ''}" data-act="qty" data-id="${h.id}" data-n="${n}" aria-label="Log ${esc(h.name)}"><span>${fmtNum(v)}</span><small>/${fmtNum(h.target_value)}</small></button>`;
+  } else {
+    ctl = `<button class="check ${done ? 'on' : ''}" data-act="toggle" data-id="${h.id}" data-n="${n}" aria-pressed="${done}" aria-label="Mark ${esc(h.name)} done">${CHECK_SVG}</button>`;
+  }
+  const st = habitStreak(h);
+  let meta;
+  if (isWeekly(h)) {
+    const N = weeklyN(h), c = weekCount(h, weekStart(n));
+    meta = `<b class="${c >= N ? 'ember' : ''}">${c}/${N} this week</b>`;
+  } else meta = esc(cadenceLabel(h)) + (h.type === 'quantity' && h.unit ? ' · ' + esc(h.unit) : '');
+  if (st) meta += ` · <span class="ember">${st}${streakUnit(h)} streak</span>`;
+  return `<div class="row ${dim ? 'dim' : ''}">${ctl}<a class="row-main" href="#/habit/${h.id}"><div class="row-title">${esc(h.name)}</div><div class="row-meta">${meta}</div></a><a class="chev" href="#/habit/${h.id}" aria-hidden="true">›</a></div>`;
+}
+
+/* ---------- Habit detail ---------- */
+function viewHabit(id) {
+  const h = habitById(id);
+  if (!h) return `<a class="back" href="#/today">‹ Today</a><div class="card empty"><h3>Habit not found</h3></div>`;
+  const t = todayN();
+  const goals = goalIdsOf(h).map(goalById).filter(Boolean);
+  const r30 = rate([h], t - 29, t);
+  let html = `<a class="back" href="javascript:history.length>1?history.back():location.hash='#/today'">‹ Back</a>
+    <h1 class="page">${esc(h.name)}</h1>
+    <p class="sub">${esc(cadenceLabel(h))}${h.type === 'quantity' ? ` · target ${fmtNum(h.target_value)} ${esc(h.unit || '')}` : ''}${h.archived ? ' · archived' : ''}</p>
+    ${goals.length ? `<div class="chips" style="margin-top:10px">${goals.map(g => `<a class="chip" href="#/goal/${g.id}">◎ ${esc(g.title)}</a>`).join('')}</div>` : ''}
+    <div class="grid3" style="margin-top:18px">
+      <div class="stat"><b class="ember">${habitStreak(h)}</b><span>Streak${isWeekly(h) ? ' (weeks)' : ''}</span></div>
+      <div class="stat"><b>${bestStreak(h)}</b><span>Best</span></div>
+      <div class="stat"><b>${pct(r30)}</b><span>Last 30 days</span></div>
+    </div>`;
+
+  if (!isWeekly(h) && !h.archived && isDue(h, t)) {
+    html += `<div class="list" style="margin-top:12px">${habitRow(h, t)}</div>`;
+  } else if (isWeekly(h) && !h.archived) html += `<div class="list" style="margin-top:12px">${habitRow(h, t)}</div>`;
+
+  html += `<div class="sec"><h2>Last 12 months</h2><span class="muted small">Tap a day to edit</span></div>
+    <div class="card">${heatmap(h)}
+      <div class="legend"><span><i class="c on"></i>Done</span>${isWeekly(h) ? '' : '<span><i class="c miss"></i>Missed</span>'}<span><i class="c rest"></i>${isWeekly(h) ? 'Not done' : 'Not scheduled'}</span></div>
+    </div>`;
+
+  // Monthly completion %
+  const [ty, tm] = ymOf(t); const s = hStart(h); const rows = [];
+  for (let i = 0; i < 12; i++) {
+    const y = ty - (tm - i < 0 ? 1 : 0), m = (tm - i + 12) % 12;
+    const a = monthStart(y, m), b = monthEnd(y, m);
+    if (b < s) break;
+    rows.push({ label: fmtMonth(y, m, true), r: rate([h], a, Math.min(b, t)) });
+  }
+  html += `<div class="sec"><h2>Monthly completion</h2></div><div class="card hbars">${rows.map(x => `
+    <div class="hb"><div class="top"><span>${esc(x.label)}</span><span>${pct(x.r)}</span></div><div class="bar"><i style="width:${(x.r || 0) * 100}%"></i></div></div>`).join('') || '<p class="muted">No data yet.</p>'}</div>
+    <div class="btns" style="margin-top:22px"><button class="btn ghost" data-act="edit-habit" data-id="${h.id}">Edit habit</button></div>`;
+  return html;
+}
+
+function heatmap(h) {
+  const t = todayN(), s = hStart(h), weeks = 53;
+  const first = weekStart(t) - 7 * (weeks - 1);
+  let cols = '', lastMonth = -1;
+  for (let w = 0; w < weeks; w++) {
+    const ws = first + 7 * w; const [, m] = ymOf(ws + 6);
+    const label = m !== lastMonth ? fmtMonth(...ymOf(ws + 6)) : ''; lastMonth = m;
+    let cells = `<span class="m">${w === 0 ? '' : esc(label)}</span>`;
+    for (let i = 0; i < 7; i++) {
+      const n = ws + i;
+      let cls = 'void', style = '';
+      if (n >= s && n <= t) {
+        const p = progressOn(h, n), done = doneOn(h, n);
+        if (isWeekly(h)) cls = done ? 'on' : p > 0 ? 'on' : 'rest';
+        else if (isDue(h, n)) cls = done ? 'on' : p > 0 ? 'on' : n === t ? 'pend' : 'miss';
+        else cls = done || p > 0 ? 'on' : 'rest';
+        if (cls === 'on' && !done) style = `style="opacity:${(0.3 + 0.6 * p).toFixed(2)}"`;
+      }
+      const tappable = n >= s && n <= t;
+      cells += `<i class="c ${cls}${n === t ? ' today' : ''}" ${style} ${tappable ? `data-act="day" data-id="${h.id}" data-n="${n}" title="${fmtDay(n)}"` : ''}></i>`;
+    }
+    cols += `<div class="hm-col">${cells}</div>`;
+  }
+  const days = `<div class="hm-days"><span></span>${WD_ORDER.map((d, i) => `<span>${i % 2 === 0 ? WD[d] : ''}</span>`).join('')}</div>`;
+  return `<div class="hm-scroll"><div class="hm-wrap">${days}${cols}</div></div>`;
+}
+
+/* ---------- Goals ---------- */
+function viewGoals() {
+  const f = UI.goalFilter;
+  const goals = S.goals.filter(g => g.status === f);
+  let html = `<h1 class="page">Goals</h1><p class="sub">What the habits are for.</p>
+    <div class="seg" style="margin:16px 0 4px">${['active', 'completed', 'archived'].map(s => `<button class="${s === f ? 'on' : ''}" data-act="goal-filter" data-v="${s}">${s[0].toUpperCase() + s.slice(1)}</button>`).join('')}</div>`;
+  if (!goals.length) {
+    html += `<div class="card empty" style="margin-top:14px"><h3>No ${f} goals</h3><p>${f === 'active' ? 'Set a goal, link habits to it, and optionally track a number that tells you whether it is working.' : ''}</p>${f === 'active' ? '<button class="btn" data-act="new-goal">New goal</button>' : ''}</div>`;
+    return html;
+  }
+  html += goals.map(goalCard).join('');
+  if (f === 'active') html += `<div class="btns" style="margin-top:16px"><button class="btn ghost" data-act="new-goal">+ New goal</button></div>`;
+  return html;
+}
+function goalCard(g) {
+  const eff = goalEffort(g), el = elapsed(g);
+  const m = metricsOf(g)[0], mp = m ? metricProgress(m) : null;
+  return `<a class="card" style="display:block;margin-top:12px" href="#/goal/${g.id}">
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
+      <div style="min-width:0"><div style="font-weight:800;font-size:16.5px">${esc(g.title)}</div><div class="muted small">${esc(timeframeLabel(g))}</div></div>
+      <span class="chev">›</span></div>
+    <div class="grid2" style="margin-top:12px">
+      <div><div class="small muted">Effort</div><div class="mono" style="font-weight:700;font-size:18px">${pct(eff)}</div></div>
+      <div><div class="small muted">${m ? esc(m.name) : 'Outcome'}</div><div class="mono" style="font-weight:700;font-size:18px">${mp && mp.p !== null ? pct(mp.p) : mp && mp.current !== null ? fmtNum(mp.current) : '–'}</div></div>
+    </div>
+    ${el ? `<div class="bar ash" style="margin-top:12px"><i style="width:${el.p * 100}%"></i></div><div class="muted small" style="margin-top:5px">Day ${el.day} of ${el.total}</div>` : ''}
+  </a>`;
+}
+
+function viewGoal(id) {
+  const g = goalById(id);
+  if (!g) return `<a class="back" href="#/goals">‹ Goals</a><div class="card empty"><h3>Goal not found</h3></div>`;
+  const t = todayN(), hs = linkedHabits(g), ms = metricsOf(g);
+  const eff = goalEffort(g), el = elapsed(g);
+  const eff30 = rate(hs, t - 29, t);
+  const m0 = ms[0], mp = m0 ? metricProgress(m0) : null;
+
+  let html = `<a class="back" href="#/goals">‹ Goals</a>
+    <h1 class="page">${esc(g.title)}</h1>
+    <p class="sub">${esc(timeframeLabel(g))} · <span class="${g.status === 'active' ? 'ember' : ''}">${esc(g.status)}</span></p>
+    ${g.description ? `<p style="margin:10px 2px 0">${esc(g.description)}</p>` : ''}
+    ${el ? `<div style="margin-top:14px"><div class="bar ash"><i style="width:${el.p * 100}%"></i></div><div class="muted small" style="margin-top:5px">Day ${el.day} of ${el.total} · ${Math.round(el.p * 100)}% of the time used</div></div>` : ''}
+    <div class="sec"><h2>Effort vs outcome</h2></div>
+    <div class="eo">
+      <div class="stat"><span>Effort · habits</span><b class="ember">${pct(eff)}</b><span>${hs.length ? `${plural(hs.length, 'habit')} · 30d ${pct(eff30)}` : 'No linked habits'}</span><div class="bar"><i style="width:${(eff || 0) * 100}%"></i></div></div>
+      <div class="stat"><span>Outcome · ${m0 ? esc(m0.name) : 'metric'}</span><b>${mp && mp.current !== null ? fmtNum(mp.current) : '–'}<small class="muted" style="font-size:12px"> ${m0 ? esc(m0.unit || '') : ''}</small></b><span>${m0 ? (m0.target_value !== null ? `target ${fmtNum(m0.target_value)} · ${pct(mp.p)}` : 'no target') : 'Not tracked'}</span><div class="bar"><i style="width:${((mp && mp.p) || 0) * 100}%;background:var(--text)"></i></div></div>
+    </div>
+    <div class="card chart" style="margin-top:12px">${effortOutcomeChart(g, m0)}
+      <div class="legend"><span><i class="c on" style="opacity:.55"></i>Weekly effort %</span>${m0 ? `<span><i style="display:inline-block;width:14px;height:2px;background:var(--text)"></i>${esc(m0.name)}</span>${m0.target_value !== null ? '<span><i style="display:inline-block;width:14px;border-top:2px dashed var(--text-2)"></i>Target</span>' : ''}` : ''}</div>
+    </div>`;
+
+  html += `<div class="sec"><h2>Linked habits</h2></div>`;
+  html += hs.length ? `<div class="card hbars">${hs.map(h => {
+    const r = rate([h], goalFrom(g), Math.min(goalTo(g) ?? t, t));
+    return `<a class="hb" href="#/habit/${h.id}" style="display:block"><div class="top"><span>${esc(h.name)}${h.archived ? ' <span class="muted">(archived)</span>' : ''}</span><span>${pct(r)} · ${habitStreak(h)}${streakUnit(h)}</span></div><div class="bar"><i style="width:${(r || 0) * 100}%"></i></div></a>`;
+  }).join('')}</div>` : `<div class="card muted small">No habits linked yet. Link habits from the goal editor or a habit's editor.</div>`;
+
+  html += `<div class="sec"><h2>Metrics</h2><button class="act" data-act="new-metric" data-id="${g.id}">+ Add</button></div>`;
+  if (!ms.length) html += `<div class="card muted small">Optional: track a measurable outcome (weight, savings, 5k time…) to see if the effort is paying off.</div>`;
+  for (const m of ms) {
+    const logs = logsOf(m), p = metricProgress(m);
+    html += `<div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div><div style="font-weight:800">${esc(m.name)}</div><div class="muted small">${m.direction === 'decrease' ? '↓ lower is better' : '↑ higher is better'}${m.start_value !== null ? ` · start ${fmtNum(m.start_value)}` : ''}${m.target_value !== null ? ` · target ${fmtNum(m.target_value)}` : ''} ${esc(m.unit || '')}</div></div>
+        <button class="btn sm" data-act="log-metric" data-id="${m.id}">Log</button></div>
+      ${ms.length > 1 && m !== m0 ? `<div class="chart" style="margin-top:12px">${metricOnlyChart(m)}</div>` : ''}
+      <div style="margin-top:10px">${logs.slice(-6).reverse().map(l => `<div class="mlog"><span>${new Date(l.logged_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span><span><b class="mono">${fmtNum(l.value)}</b> ${esc(m.unit || '')}<button data-act="del-mlog" data-id="${l.id}" aria-label="Delete entry">×</button></span></div>`).join('') || '<div class="muted small">No entries yet.</div>'}</div>
+      ${p.p !== null ? `<div class="bar" style="margin-top:10px"><i style="width:${p.p * 100}%"></i></div>` : ''}
+      <button class="linkbtn" data-act="edit-metric" data-id="${m.id}">Edit metric</button>
+    </div>`;
+  }
+  html += `<div class="btns" style="margin-top:22px"><button class="btn ghost" data-act="edit-goal" data-id="${g.id}">Edit goal</button></div>`;
+  return html;
+}
+
+/* ---------- Charts (hand-rolled SVG) ---------- */
+function effortOutcomeChart(g, m) {
+  const t = todayN(), hs = linkedHabits(g);
+  const from = goalFrom(g), to = Math.min(goalTo(g) ?? t, t);
+  let w0 = weekStart(from); const wEnd = weekStart(Math.max(to, from));
+  if ((wEnd - w0) / 7 > 25) w0 = wEnd - 25 * 7;
+  const weeks = [];
+  for (let ws = w0; ws <= wEnd; ws += 7) weeks.push({ ws, r: rate(hs, Math.max(ws, from), Math.min(ws + 6, to)) });
+  const logs = m ? logsOf(m).map(l => ({ n: dnum(localDateStr(new Date(l.logged_at))), v: +l.value })) : [];
+  let x0 = w0, x1 = wEnd + 7;
+  if (logs.length) { x0 = Math.min(x0, logs[0].n); x1 = Math.max(x1, logs[logs.length - 1].n + 1); }
+  const W = 340, H = 170, L = 6, R = 6, T = 14, B = 22, iw = W - L - R, ih = H - T - B;
+  const X = n => L + (n - x0) / Math.max(1, x1 - x0) * iw;
+  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Weekly effort and metric trend">`;
+  svg += `<line x1="${L}" x2="${W - R}" y1="${T + ih}" y2="${T + ih}" stroke="#332E27"/>`;
+  const bw = Math.max(3, 7 / Math.max(1, x1 - x0) * iw * 0.62);
+  for (const w of weeks) {
+    if (w.r === null) continue;
+    const h = Math.max(1.5, w.r * ih);
+    svg += `<rect x="${(X(w.ws + 3.5) - bw / 2).toFixed(1)}" y="${(T + ih - h).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="#E2501C" opacity=".55"/>`;
+  }
+  if (m && logs.length) {
+    const vals = logs.map(l => l.v).concat([m.start_value, m.target_value].filter(v => v !== null && v !== undefined).map(Number));
+    let lo = Math.min(...vals), hi = Math.max(...vals); if (lo === hi) { lo -= 1; hi += 1; }
+    const padv = (hi - lo) * 0.1; lo -= padv; hi += padv;
+    const Y = v => T + (1 - (v - lo) / (hi - lo)) * ih;
+    if (m.target_value !== null) svg += `<line x1="${L}" x2="${W - R}" y1="${Y(+m.target_value).toFixed(1)}" y2="${Y(+m.target_value).toFixed(1)}" stroke="#A39B91" stroke-dasharray="4 4"/><text x="${W - R}" y="${(Y(+m.target_value) - 4).toFixed(1)}" text-anchor="end" font-size="10" fill="#A39B91" font-family="JetBrains Mono">${esc(fmtNum(m.target_value))}</text>`;
+    const pts = logs.map(l => `${X(l.n + 0.5).toFixed(1)},${Y(l.v).toFixed(1)}`);
+    svg += `<polyline points="${pts.join(' ')}" fill="none" stroke="#F2EDE6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    svg += logs.map(l => `<circle cx="${X(l.n + 0.5).toFixed(1)}" cy="${Y(l.v).toFixed(1)}" r="3" fill="#121110" stroke="#F2EDE6" stroke-width="1.6"/>`).join('');
+  } else if (!weeks.some(w => w.r !== null)) {
+    svg += `<text x="${W / 2}" y="${H / 2}" text-anchor="middle" font-size="12" fill="#A39B91" font-family="Plus Jakarta Sans">No data yet</text>`;
+  }
+  svg += `<text x="${L}" y="${H - 6}" font-size="10" fill="#A39B91" font-family="Plus Jakarta Sans">${esc(fmtDay(x0))}</text><text x="${W - R}" y="${H - 6}" text-anchor="end" font-size="10" fill="#A39B91" font-family="Plus Jakarta Sans">${esc(fmtDay(x1 - 1))}</text>`;
+  return svg + '</svg>';
+}
+function metricOnlyChart(m) { return effortOutcomeChart({ ...goalById(m.goal_id), id: '__none__' }, m); }
+
+function vbars(items) {
+  return `<div class="vbars">${items.map(i => `<div class="vbar"><span class="v">${i.v === null ? '–' : pct(i.v)}</span><div class="col ${i.cls || ''}" style="height:${i.v === null ? 3 : Math.max(3, i.v * 100)}%"></div><span class="l">${esc(i.label)}</span></div>`).join('')}</div>`;
+}
+function hbars(items) {
+  return `<div class="hbars">${items.map(i => `<div class="hb"><div class="top"><span>${esc(i.label)}</span><span>${pct(i.v)}</span></div><div class="bar ${i.ash ? 'ash' : ''}"><i style="width:${(i.v || 0) * 100}%"></i></div></div>`).join('')}</div>`;
+}
+
+/* ---------- Insights ---------- */
+function viewInsights() {
+  const t = todayN(), win = UI.insWin, from = t - win, to = t - 1;
+  let html = `<h1 class="page">Insights</h1><p class="sub">Finished days only — today is left out.</p>
+    <div class="seg" style="margin:16px 0 4px">${[30, 90, 365].map(w => `<button class="${w === win ? 'on' : ''}" data-act="ins-win" data-v="${w}">${w === 365 ? '1 year' : w + ' days'}</button>`).join('')}</div>`;
+  const hs = S.habits.filter(h => !h.archived);
+  if (!hs.length) return html + `<div class="card empty" style="margin-top:14px"><h3>No data yet</h3><p>Insights appear once you've tracked a few days.</p></div>`;
+
+  // Day-of-week pattern (day-based habits only)
+  const due = Array(7).fill(0), done = Array(7).fill(0);
+  for (const h of hs.filter(h => !isWeekly(h))) {
+    for (let n = Math.max(from, hStart(h)); n <= to; n++) if (isDue(h, n)) { due[wd(n)]++; if (doneOn(h, n)) done[wd(n)]++; }
+  }
+  const dow = WD_ORDER.map(d => ({ d, label: WD[d][0] + WD[d].slice(1, 2), v: due[d] ? done[d] / due[d] : null }));
+  const valid = dow.filter(x => x.v !== null);
+  html += `<div class="sec"><h2>Day of week</h2></div><div class="card">`;
+  if (valid.length) {
+    const worst = valid.reduce((a, b) => b.v < a.v ? b : a), bestD = valid.reduce((a, b) => b.v > a.v ? b : a);
+    html += vbars(dow.map(x => ({ label: x.label, v: x.v, cls: x === worst && worst.v < 1 ? 'ash' : x === bestD ? 'ember' : 'mid' })));
+    html += `<p class="insight-line">${worst.v < 1 ? `You miss most on <b>${WD_LONG[worst.d]}s</b> (${pct(worst.v)} done). ` : ''}Strongest: <b>${WD_LONG[bestD.d]}s</b> (${pct(bestD.v)}).</p>`;
+  } else html += `<p class="muted small">Not enough finished days in this window yet.</p>`;
+  html += `</div>`;
+
+  // By goal
+  const byGoal = S.goals.filter(g => g.status !== 'archived').map(g => ({ label: g.title, v: rate(linkedHabits(g).filter(h => !h.archived), from, to) })).filter(x => x.v !== null);
+  const unlinked = hs.filter(h => !goalIdsOf(h).length);
+  const ur = rate(unlinked, from, to);
+  if (ur !== null) byGoal.push({ label: 'No goal', v: ur, ash: true });
+  html += `<div class="sec"><h2>By goal</h2></div><div class="card">${byGoal.length ? hbars(byGoal.sort((a, b) => b.v - a.v)) : '<p class="muted small">Link habits to goals to see this.</p>'}</div>`;
+
+  // Month over month
+  const [ty, tm] = ymOf(t); const months = [];
+  const minS = Math.min(...hs.map(hStart));
+  for (let i = 5; i >= 0; i--) {
+    const y = ty - (tm - i < 0 ? 1 : 0), m = (tm - i + 12) % 12;
+    const a = monthStart(y, m), b = Math.min(monthEnd(y, m), t - 1);
+    months.push({ label: fmtMonth(y, m), v: b < minS || a > b ? null : rate(hs, a, b) });
+  }
+  const mv = months.filter(x => x.v !== null);
+  html += `<div class="sec"><h2>Month over month</h2></div><div class="card">${vbars(months.map((x, i) => ({ ...x, cls: i === months.length - 1 ? 'ember' : 'mid' })))}`;
+  if (mv.length >= 2) {
+    const a = mv[mv.length - 2], b = mv[mv.length - 1], d = Math.round((b.v - a.v) * 100);
+    html += `<p class="insight-line">${b.label}: <b>${pct(b.v)}</b> — ${d === 0 ? 'flat' : `${d > 0 ? '▲' : '▼'} ${Math.abs(d)} pts`} vs ${a.label}.</p>`;
+  }
+  html += `</div>`;
+
+  // Habit ranking
+  const rank = hs.map(h => ({ label: h.name, v: rate([h], from, to) })).filter(x => x.v !== null).sort((a, b) => b.v - a.v);
+  html += `<div class="sec"><h2>Habits</h2></div><div class="card">${rank.length ? hbars(rank.map(x => ({ ...x, ash: x.v < 0.5 }))) : '<p class="muted small">No finished days yet.</p>'}</div>`;
+  return html;
+}
+
+/* ---------- Settings / management ---------- */
+function viewSettings() {
+  const habits = S.habits.filter(h => UI.showArchived || !h.archived);
+  const archivedCount = S.habits.filter(h => h.archived).length;
+  return `<h1 class="page">Manage</h1><p class="sub">${esc(S.user.email || '')}</p>
+    <div class="sec"><h2>Habits</h2><button class="act" data-act="new-habit">+ New</button></div>
+    ${habits.length ? `<div class="list">${habits.map(h => `<button class="row" style="width:100%;text-align:left" data-act="edit-habit" data-id="${h.id}"><div class="row-main"><div class="row-title">${esc(h.name)}${h.archived ? ' <span class="chip">archived</span>' : ''}</div><div class="row-meta">${esc(cadenceLabel(h))}${h.type === 'quantity' ? ` · ${fmtNum(h.target_value)} ${esc(h.unit || '')}` : ''}${goalIdsOf(h).length ? ' · ' + goalIdsOf(h).map(id => esc(goalById(id)?.title || '')).join(', ') : ''}</div></div><span class="chev">›</span></button>`).join('')}</div>` : `<div class="card muted small">No habits yet.</div>`}
+    ${archivedCount ? `<button class="linkbtn" data-act="toggle-archived">${UI.showArchived ? 'Hide' : 'Show'} archived (${archivedCount})</button>` : ''}
+    <div class="sec"><h2>Goals</h2><button class="act" data-act="new-goal">+ New</button></div>
+    ${S.goals.length ? `<div class="list">${S.goals.map(g => `<button class="row" style="width:100%;text-align:left" data-act="edit-goal" data-id="${g.id}"><div class="row-main"><div class="row-title">${esc(g.title)} ${g.status !== 'active' ? `<span class="chip">${esc(g.status)}</span>` : ''}</div><div class="row-meta">${esc(timeframeLabel(g))}${metricsOf(g).length ? ' · ' + plural(metricsOf(g).length, 'metric') : ''}</div></div><span class="chev">›</span></button>`).join('')}</div>` : `<div class="card muted small">No goals yet.</div>`}
+    <div class="sec"><h2>Reminders</h2></div>
+    <div class="card" id="push-card"><span class="muted small">Checking…</span></div>
+    <div class="sec"><h2>App</h2></div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between"><span class="muted">Version</span><span class="mono">${APP_VERSION}</span></div>
+      <div class="btns"><button class="btn ghost" data-act="hard-reload">Check for update</button><button class="btn danger" data-act="sign-out">Sign out</button></div>
+    </div>`;
+}
+
+/* ============================================================
+   Sheets (editors)
+   ============================================================ */
+let sheetSubmit = null;
+function openSheet(html, onSubmit) {
+  $('#sheet-body').innerHTML = html; sheetSubmit = onSubmit;
+  $('#sheet').classList.add('open'); $('#backdrop').classList.add('open');
+  $('#sheet').scrollTop = 0;
+}
+function closeSheet() { $('#sheet').classList.remove('open'); $('#backdrop').classList.remove('open'); sheetSubmit = null; }
+$('#backdrop').addEventListener('click', closeSheet);
+$('#sheet').addEventListener('submit', async e => {
+  e.preventDefault(); if (!sheetSubmit) return;
+  const btn = e.target.querySelector('[type=submit]'); if (btn) btn.disabled = true;
+  try { const ok = await sheetSubmit(e.target); if (ok !== false) closeSheet(); }
+  catch (err) { console.error(err); }
+  finally { if (btn) btn.disabled = false; }
+});
+const segVal = (root, name) => root.querySelector(`.seg[data-name="${name}"] button.on`)?.dataset.v;
+const chipVals = (root, name) => $$(`.chips[data-multi="${name}"] .chip.on`, root).map(b => b.dataset.v);
+
+async function db(q) {
+  const { data, error } = await q;
+  if (error) { toast(isNetErr(error) ? 'You’re offline — try again when connected.' : error.message); throw error; }
+  return data;
+}
+const commit = () => { reindex(); saveCache(); render(); };
+
+/* ---------- Habit editor ---------- */
+function habitEditor(h) {
+  const c = h ? cfg(h) : {};
+  const type = h?.type || 'boolean', cad = h?.cadence_type || 'daily';
+  const linked = h ? goalIdsOf(h) : [];
+  const goals = S.goals.filter(g => g.status === 'active' || linked.includes(g.id));
+  const startN = h ? hStart(h) : todayN();
+  openSheet(`<h3>${h ? 'Edit habit' : 'New habit'}</h3><form>
+    <label class="field"><span>Name</span><input name="name" required maxlength="120" value="${esc(h?.name || '')}" placeholder="Read, Run, No sugar…"></label>
+    <div class="field"><span>Type</span><div class="seg" data-name="type"><button type="button" data-v="boolean" class="${type === 'boolean' ? 'on' : ''}">Done / not done</button><button type="button" data-v="quantity" class="${type === 'quantity' ? 'on' : ''}">Quantity</button></div></div>
+    <div class="grid2 show-quantity ${type === 'quantity' ? '' : 'hidden'}">
+      <label class="field"><span>Daily target</span><input name="target_value" type="number" step="any" min="0" inputmode="decimal" value="${h?.target_value ?? ''}"></label>
+      <label class="field"><span>Unit</span><input name="unit" maxlength="20" value="${esc(h?.unit || '')}" placeholder="pages, km…"></label>
+    </div>
+    <label class="field"><span>Schedule</span><select name="cadence_type">
+      ${[['daily', 'Every day'], ['every_n_days', 'Every N days'], ['specific_weekdays', 'Specific weekdays'], ['n_per_week', 'N times per week']].map(([v, l]) => `<option value="${v}" ${v === cad ? 'selected' : ''}>${l}</option>`).join('')}
+    </select></label>
+    <label class="field cad cad-every_n_days ${cad === 'every_n_days' ? '' : 'hidden'}"><span>Every how many days?</span><input name="every_n" type="number" min="2" max="90" inputmode="numeric" value="${cad === 'every_n_days' ? +c.n || 2 : 2}"></label>
+    <div class="field cad cad-specific_weekdays ${cad === 'specific_weekdays' ? '' : 'hidden'}"><span>On</span><div class="chips" data-multi="days">${WD_ORDER.map(d => `<button type="button" class="chip ${(c.days || []).map(Number).includes(d) ? 'on' : ''}" data-v="${d}">${WD[d]}</button>`).join('')}</div></div>
+    <label class="field cad cad-n_per_week ${cad === 'n_per_week' ? '' : 'hidden'}"><span>Times per week (any days)</span><input name="per_week" type="number" min="1" max="7" inputmode="numeric" value="${cad === 'n_per_week' ? weeklyN(h) : 3}"></label>
+    <p class="hint cad cad-n_per_week ${cad === 'n_per_week' ? '' : 'hidden'}">Weekly habits get their own counter and stay out of the perfect-day streak.</p>
+    <label class="field"><span>Start date</span><input type="date" name="start" value="${dstr(startN)}" max="${dstr(todayN())}"></label>
+    <p class="hint">Scheduling and streaks count from this day. Set it in the past to back-fill.</p>
+    ${goals.length ? `<div class="field"><span>Serves goals</span><div class="chips" data-multi="goals">${goals.map(g => `<button type="button" class="chip ${linked.includes(g.id) ? 'on' : ''}" data-v="${g.id}">${esc(g.title)}</button>`).join('')}</div></div>` : ''}
+    ${h ? `<label class="toggle-row">Archived<input type="checkbox" name="archived" ${h.archived ? 'checked' : ''}></label>` : ''}
+    <button class="btn" type="submit">${h ? 'Save' : 'Create habit'}</button>
+    ${h ? `<button class="btn danger" type="button" style="margin-top:10px" data-act="delete-habit" data-id="${h.id}">Delete habit and its history</button>` : ''}
+  </form>`, async f => {
+    const type = segVal(f, 'type'), cad = f.cadence_type.value;
+    const name = f.name.value.trim(); if (!name) { toast('Give it a name'); return false; }
+    let cadence_config = {};
+    if (cad === 'every_n_days') cadence_config = { n: Math.max(2, Math.round(+f.every_n.value || 2)) };
+    if (cad === 'specific_weekdays') { const days = chipVals(f, 'days').map(Number).sort(); if (!days.length) { toast('Pick at least one day'); return false; } cadence_config = { days }; }
+    if (cad === 'n_per_week') cadence_config = { n: Math.max(1, Math.min(7, Math.round(+f.per_week.value || 1))) };
+    const target = +f.target_value.value;
+    if (type === 'quantity' && !(target > 0)) { toast('Set a target above 0'); return false; }
+    const row = { name, type, target_value: type === 'quantity' ? target : null, unit: type === 'quantity' ? (f.unit.value.trim() || null) : null, cadence_type: cad, cadence_config };
+    if (h) row.archived = f.archived.checked;
+    const newStart = f.start.value ? dnum(f.start.value) : startN;
+    if (!h ? newStart !== todayN() : newStart !== startN) row.created_at = noonISO(newStart);
+    const saved = h
+      ? await db(sb.from('habits').update(row).eq('id', h.id).select().single())
+      : await db(sb.from('habits').insert({ ...row, user_id: S.user.id }).select().single());
+    S.habits = h ? S.habits.map(x => x.id === h.id ? saved : x) : [...S.habits, saved];
+    // sync goal links
+    const want = chipVals(f, 'goals'), have = h ? goalIdsOf(h) : [];
+    const add = want.filter(id => !have.includes(id)), del = have.filter(id => !want.includes(id));
+    if (add.length) await db(sb.from('habit_goals').insert(add.map(goal_id => ({ habit_id: saved.id, goal_id }))));
+    if (del.length) await db(sb.from('habit_goals').delete().eq('habit_id', saved.id).in('goal_id', del));
+    S.habitGoals = S.habitGoals.filter(x => !(x.habit_id === saved.id && del.includes(x.goal_id))).concat(add.map(goal_id => ({ habit_id: saved.id, goal_id })));
+    commit(); toast(h ? 'Saved' : 'Habit created');
+  });
+}
+
+/* ---------- Goal editor ---------- */
+function periodFor(kind) {
+  const d = new Date(), y = d.getFullYear();
+  if (kind === 'yearly') return [`${y}-01-01`, `${y}-12-31`];
+  if (kind === 'quarterly') { const q = Math.floor(d.getMonth() / 3); return [dstr(monthStart(y, q * 3)), dstr(monthEnd(y, q * 3 + 2))]; }
+  return null;
+}
+function goalEditor(g) {
+  const kind = g?.timeframe_type || 'quarterly';
+  const [ds, de] = g ? [g.start_date || '', g.end_date || ''] : periodFor(kind);
+  const linked = g ? linkedHabits(g).map(h => h.id) : [];
+  const habits = S.habits.filter(h => !h.archived || linked.includes(h.id));
+  const ms = g ? metricsOf(g) : [];
+  openSheet(`<h3>${g ? 'Edit goal' : 'New goal'}</h3><form>
+    <label class="field"><span>Goal</span><input name="title" required maxlength="200" value="${esc(g?.title || '')}" placeholder="Run a sub-25 5k"></label>
+    <label class="field"><span>Why / notes (optional)</span><textarea name="description" maxlength="2000">${esc(g?.description || '')}</textarea></label>
+    <div class="field"><span>Timeframe</span><div class="seg" data-name="timeframe" data-act-change="timeframe">${['yearly', 'quarterly', 'custom'].map(k => `<button type="button" data-v="${k}" class="${k === kind ? 'on' : ''}">${k[0].toUpperCase() + k.slice(1)}</button>`).join('')}</div></div>
+    <div class="grid2"><label class="field"><span>Start</span><input type="date" name="start_date" value="${ds}"></label><label class="field"><span>End</span><input type="date" name="end_date" value="${de}"></label></div>
+    ${g ? `<label class="field"><span>Status</span><select name="status">${['active', 'completed', 'archived'].map(s => `<option value="${s}" ${s === g.status ? 'selected' : ''}>${s[0].toUpperCase() + s.slice(1)}</option>`).join('')}</select></label>` : ''}
+    ${habits.length ? `<div class="field"><span>Habits that serve it</span><div class="chips" data-multi="habits">${habits.map(h => `<button type="button" class="chip ${linked.includes(h.id) ? 'on' : ''}" data-v="${h.id}">${esc(h.name)}</button>`).join('')}</div></div>` : ''}
+    ${g ? `<div class="field"><span>Metrics</span>${ms.map(m => `<div class="mlog"><span>${esc(m.name)} <span class="muted small">${esc(m.unit || '')}</span></span><button type="button" class="linkbtn" data-act="edit-metric" data-id="${m.id}">Edit</button></div>`).join('') || '<div class="muted small">None</div>'}<button type="button" class="linkbtn" data-act="new-metric" data-id="${g.id}">+ Add metric</button></div>`
+      : `<fieldset class="fs"><legend>Track an outcome (optional)</legend>
+        <label class="field"><span>Metric</span><input name="m_name" maxlength="120" placeholder="5k time, weight, savings…"></label>
+        <div class="grid2"><label class="field"><span>Unit</span><input name="m_unit" maxlength="20" placeholder="min, kg, €"></label>
+        <div class="field"><span>Better is</span><div class="seg" data-name="m_dir"><button type="button" data-v="increase" class="on">↑</button><button type="button" data-v="decrease">↓</button></div></div></div>
+        <div class="grid2"><label class="field"><span>Start value</span><input name="m_start" type="number" step="any" inputmode="decimal"></label><label class="field"><span>Target</span><input name="m_target" type="number" step="any" inputmode="decimal"></label></div>
+      </fieldset>`}
+    <button class="btn" type="submit">${g ? 'Save' : 'Create goal'}</button>
+    ${g ? `<button class="btn danger" type="button" style="margin-top:10px" data-act="delete-goal" data-id="${g.id}">Delete goal</button>` : ''}
+  </form>`, async f => {
+    const title = f.title.value.trim(); if (!title) { toast('Name the goal'); return false; }
+    const row = { title, description: f.description.value.trim() || null, timeframe_type: segVal(f, 'timeframe'), start_date: f.start_date.value || null, end_date: f.end_date.value || null };
+    if (row.start_date && row.end_date && row.end_date < row.start_date) { toast('End date is before start date'); return false; }
+    if (g) row.status = f.status.value;
+    const saved = g
+      ? await db(sb.from('goals').update(row).eq('id', g.id).select().single())
+      : await db(sb.from('goals').insert({ ...row, user_id: S.user.id }).select().single());
+    S.goals = g ? S.goals.map(x => x.id === g.id ? saved : x) : [...S.goals, saved];
+    const want = chipVals(f, 'habits'), have = linked;
+    const add = want.filter(id => !have.includes(id)), del = have.filter(id => !want.includes(id));
+    if (add.length) await db(sb.from('habit_goals').insert(add.map(habit_id => ({ habit_id, goal_id: saved.id }))));
+    if (del.length) await db(sb.from('habit_goals').delete().eq('goal_id', saved.id).in('habit_id', del));
+    S.habitGoals = S.habitGoals.filter(x => !(x.goal_id === saved.id && del.includes(x.habit_id))).concat(add.map(habit_id => ({ habit_id, goal_id: saved.id })));
+    if (!g && f.m_name.value.trim()) {
+      const m = await db(sb.from('goal_metrics').insert({ goal_id: saved.id, name: f.m_name.value.trim(), unit: f.m_unit.value.trim() || null, direction: segVal(f, 'm_dir'), start_value: f.m_start.value === '' ? null : +f.m_start.value, target_value: f.m_target.value === '' ? null : +f.m_target.value }).select().single());
+      S.metrics.push(m);
+      if (f.m_start.value !== '') { const l = await db(sb.from('goal_metric_logs').insert({ goal_metric_id: m.id, value: +f.m_start.value, logged_at: row.start_date ? noonISO(dnum(row.start_date)) : new Date().toISOString() }).select().single()); S.metricLogs.push(l); }
+    }
+    commit(); toast(g ? 'Saved' : 'Goal created');
+    if (!g) location.hash = '#/goal/' + saved.id;
+  });
+}
+
+/* ---------- Metric editor + log ---------- */
+function metricEditor(goalId, m) {
+  const dir = m?.direction || 'increase';
+  openSheet(`<h3>${m ? 'Edit metric' : 'New metric'}</h3><form>
+    <label class="field"><span>Name</span><input name="name" required maxlength="120" value="${esc(m?.name || '')}" placeholder="Weight, 5k time…"></label>
+    <div class="grid2"><label class="field"><span>Unit</span><input name="unit" maxlength="20" value="${esc(m?.unit || '')}"></label>
+    <div class="field"><span>Better is</span><div class="seg" data-name="dir"><button type="button" data-v="increase" class="${dir === 'increase' ? 'on' : ''}">↑ Higher</button><button type="button" data-v="decrease" class="${dir === 'decrease' ? 'on' : ''}">↓ Lower</button></div></div></div>
+    <div class="grid2"><label class="field"><span>Start value</span><input name="start_value" type="number" step="any" inputmode="decimal" value="${m?.start_value ?? ''}"></label>
+    <label class="field"><span>Target</span><input name="target_value" type="number" step="any" inputmode="decimal" value="${m?.target_value ?? ''}"></label></div>
+    <button class="btn" type="submit">${m ? 'Save' : 'Add metric'}</button>
+    ${m ? `<button class="btn danger" type="button" style="margin-top:10px" data-act="delete-metric" data-id="${m.id}">Delete metric and its entries</button>` : ''}
+  </form>`, async f => {
+    const name = f.name.value.trim(); if (!name) { toast('Name it'); return false; }
+    const row = { name, unit: f.unit.value.trim() || null, direction: segVal(f, 'dir'), start_value: f.start_value.value === '' ? null : +f.start_value.value, target_value: f.target_value.value === '' ? null : +f.target_value.value };
+    const saved = m
+      ? await db(sb.from('goal_metrics').update(row).eq('id', m.id).select().single())
+      : await db(sb.from('goal_metrics').insert({ ...row, goal_id: goalId }).select().single());
+    S.metrics = m ? S.metrics.map(x => x.id === m.id ? saved : x) : [...S.metrics, saved];
+    commit(); toast('Saved');
+  });
+}
+function metricLogSheet(m) {
+  const last = logsOf(m).slice(-1)[0];
+  openSheet(`<h3>Log ${esc(m.name)}</h3><form>
+    <label class="field"><span>Value ${m.unit ? `(${esc(m.unit)})` : ''}</span><input name="value" type="number" step="any" inputmode="decimal" required value="${last ? +last.value : ''}" autofocus></label>
+    <label class="field"><span>Date</span><input type="date" name="date" value="${dstr(todayN())}" max="${dstr(todayN())}"></label>
+    <button class="btn" type="submit">Save entry</button></form>`, async f => {
+    if (f.value.value === '') { toast('Enter a value'); return false; }
+    const n = f.date.value ? dnum(f.date.value) : todayN();
+    const l = await db(sb.from('goal_metric_logs').insert({ goal_metric_id: m.id, value: +f.value.value, logged_at: n === todayN() ? new Date().toISOString() : noonISO(n) }).select().single());
+    S.metricLogs.push(l); commit(); toast('Logged');
+  });
+}
+
+/* ---------- Check-in sheets ---------- */
+function qtySheet(h, n) {
+  const log = getLog(h, n), v = +log?.value || 0;
+  const label = n === todayN() ? 'Today' : fmtDay(n, { weekday: 'short', month: 'short', day: 'numeric' });
+  openSheet(`<h3>${esc(h.name)}</h3><p class="muted" style="margin:-10px 0 12px">${esc(label)} · target ${fmtNum(h.target_value)} ${esc(h.unit || '')}</p><form>
+    <div class="stepper"><button type="button" data-step="-1">−</button><input name="value" type="number" step="any" min="0" inputmode="decimal" value="${v || ''}" placeholder="0"><button type="button" data-step="1">+</button></div>
+    <div class="btns" style="margin-top:0"><button type="button" class="btn ghost" data-fill="${+h.target_value}">Hit target</button><button type="button" class="btn ghost" data-fill="0">Clear</button></div>
+    <button class="btn" type="submit" style="margin-top:12px">Save</button></form>`, f => {
+    const val = Math.max(0, +f.value.value || 0);
+    setLog(h, n, { completed: val >= (+h.target_value || Infinity), value: val });
+  });
+}
+function dayEditSheet(h, n) {
+  if (h.type === 'quantity') return qtySheet(h, n);
+  const done = doneOn(h, n);
+  openSheet(`<h3>${esc(h.name)}</h3><p class="muted" style="margin:-10px 0 16px">${fmtDay(n, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}${!isWeekly(h) && !isDue(h, n) ? ' · not scheduled' : ''}</p>
+    <form><button class="btn ${done ? 'ghost' : ''}" type="submit">${done ? 'Mark as not done' : 'Mark as done'}</button></form>`, () => {
+    setLog(h, n, { completed: !done, value: null });
+  });
+}
+function passwordSheet() {
+  openSheet(`<h3>Set a new password</h3><form><label class="field"><span>New password</span><input type="password" name="pw" minlength="6" required autocomplete="new-password"></label><button class="btn" type="submit">Update password</button></form>`, async f => {
+    if (f.pw.value.length < 6) { toast('At least 6 characters'); return false; }
+    const { error } = await sb.auth.updateUser({ password: f.pw.value });
+    if (error) { toast(error.message); return false; }
+    toast('Password updated');
+  });
+}
+
+/* ============================================================
+   Push notifications
+   ============================================================ */
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isStandalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+const remindHour = () => lsGet('willrot_remind_hour', 20);
+function b64ToU8(b64) { const p = '='.repeat((4 - b64.length % 4) % 4); const s = atob((b64 + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(s, c => c.charCodeAt(0)); }
+
+async function pushState() {
+  if (!pushSupported()) return isIOS && !isStandalone() ? 'install' : 'unsupported';
+  if (Notification.permission === 'denied') return 'denied';
+  const reg = await navigator.serviceWorker.getRegistration();
+  const sub = await reg?.pushManager.getSubscription();
+  return sub && Notification.permission === 'granted' ? 'on' : 'off';
+}
+async function saveSubscription(sub) {
+  const j = sub.toJSON();
+  return db(sb.from('push_subscriptions').upsert({
+    user_id: S.user.id, endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', remind_hour: remindHour(), user_agent: navigator.userAgent.slice(0, 200),
+  }, { onConflict: 'endpoint' }));
+}
+async function enablePush() {
+  try {
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') { toast('Notifications not allowed'); return render(); }
+    const reg = await navigator.serviceWorker.ready;
+    const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToU8(VAPID_PUBLIC_KEY) });
+    await saveSubscription(sub);
+    toast('Reminders on');
+  } catch (e) { console.error(e); toast('Could not enable reminders: ' + (e.message || e)); }
+  render();
+}
+async function disablePush() {
+  const reg = await navigator.serviceWorker.getRegistration();
+  const sub = await reg?.pushManager.getSubscription();
+  if (sub) { await sb.from('push_subscriptions').delete().eq('endpoint', sub.endpoint); await sub.unsubscribe(); }
+  toast('Reminders off'); render();
+}
+async function syncPushSubscription() {
+  try {
+    if (!pushSupported() || Notification.permission !== 'granted') return;
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (sub) await saveSubscription(sub);
+  } catch (e) { console.warn('push sync', e); }
+}
+async function testPush() {
+  const { data: { session } } = await sb.auth.getSession();
+  try {
+    const res = await fetch(PUSH_FN_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session?.access_token, apikey: SUPABASE_ANON }, body: JSON.stringify({ test: true }) });
+    const j = await res.json().catch(() => ({}));
+    toast(res.ok ? 'Test sent — check your notifications' : 'Test failed: ' + (j.error || res.status));
+  } catch (e) { toast('Edge Function unreachable (deployed yet?)'); }
+}
+async function fillPushCard() {
+  const el = $('#push-card'); if (!el) return;
+  const st = await pushState(); if (!$('#push-card')) return;
+  const hourSel = `<select data-act-change="remind-hour" style="width:auto">${Array.from({ length: 24 }, (_, i) => `<option value="${i}" ${i === remindHour() ? 'selected' : ''}>${pad(i)}:00</option>`).join('')}</select>`;
+  el.innerHTML = {
+    on: `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><b>Reminders on</b><div class="muted small">Daily nudge for anything still due</div></div>${hourSel}</div><div class="btns"><button class="btn ghost" data-act="push-test">Send test</button><button class="btn ghost" data-act="push-off">Turn off</button></div>`,
+    off: `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><b>Daily reminder</b><div class="muted small">One push at this hour if habits are still due</div></div>${hourSel}</div><div class="btns"><button class="btn" data-act="push-on">Enable reminders</button></div>`,
+    install: `<b>Install first</b><p class="muted small" style="margin-top:4px">On iPhone, push works for Home Screen apps only: tap Share → <b>Add to Home Screen</b>, then open Willrot from there.</p>`,
+    denied: `<b>Notifications blocked</b><p class="muted small" style="margin-top:4px">Allow notifications for Willrot in your device settings, then come back.</p>`,
+    unsupported: `<b>Not supported here</b><p class="muted small" style="margin-top:4px">This browser doesn’t support web push.</p>`,
+  }[st];
+}
+async function fillTodayBanner() {
+  const el = $('#today-banner'); if (!el || !S.habits.length) return;
+  if (lsGet('willrot_banner_dismissed', false)) return;
+  const st = await pushState(); if (!$('#today-banner')) return;
+  if (st === 'off' && (isStandalone() || !isIOS)) el.innerHTML = `<div class="banner"><p><b>Get a nudge when habits are due</b>One reminder a day, only if something's left.</p><button class="btn sm" data-act="push-on">Enable</button><button class="x" data-act="dismiss-banner" aria-label="Dismiss">×</button></div>`;
+  else if (st === 'install') el.innerHTML = `<div class="banner"><p><b>Install Willrot</b>Share → Add to Home Screen for offline use and reminders.</p><button class="x" data-act="dismiss-banner" aria-label="Dismiss">×</button></div>`;
+}
+
+/* ============================================================
+   Event wiring
+   ============================================================ */
+const ACT = {
+  toggle: el => { const h = habitById(el.dataset.id); setLog(h, +el.dataset.n, { completed: !doneOn(h, +el.dataset.n), value: null }); },
+  qty: el => qtySheet(habitById(el.dataset.id), +el.dataset.n),
+  day: el => dayEditSheet(habitById(el.dataset.id), +el.dataset.n),
+  'new-habit': () => habitEditor(null),
+  'edit-habit': el => habitEditor(habitById(el.dataset.id)),
+  'new-goal': () => goalEditor(null),
+  'edit-goal': el => goalEditor(goalById(el.dataset.id)),
+  'new-metric': el => metricEditor(el.dataset.id, null),
+  'edit-metric': el => { const m = S.metrics.find(x => x.id === el.dataset.id); metricEditor(m.goal_id, m); },
+  'log-metric': el => metricLogSheet(S.metrics.find(x => x.id === el.dataset.id)),
+  'del-mlog': async el => {
+    if (!confirm('Delete this entry?')) return;
+    await db(sb.from('goal_metric_logs').delete().eq('id', el.dataset.id));
+    S.metricLogs = S.metricLogs.filter(l => l.id !== el.dataset.id); commit();
+  },
+  'delete-habit': async el => {
+    if (!confirm('Delete this habit and all its check-ins? Archiving keeps the history instead.')) return;
+    const id = el.dataset.id;
+    await db(sb.from('habits').delete().eq('id', id));
+    S.habits = S.habits.filter(h => h.id !== id); S.logs = S.logs.filter(l => l.habit_id !== id); S.habitGoals = S.habitGoals.filter(x => x.habit_id !== id);
+    for (const k of Object.keys(OUTBOX)) if (k.startsWith(id + '|')) delete OUTBOX[k];
+    saveOutbox(); closeSheet(); commit(); if (route().name === 'habit') location.hash = '#/today';
+  },
+  'delete-goal': async el => {
+    if (!confirm('Delete this goal and its metrics? Linked habits are kept.')) return;
+    const id = el.dataset.id;
+    await db(sb.from('goals').delete().eq('id', id));
+    const mids = S.metrics.filter(m => m.goal_id === id).map(m => m.id);
+    S.goals = S.goals.filter(g => g.id !== id); S.metrics = S.metrics.filter(m => m.goal_id !== id);
+    S.metricLogs = S.metricLogs.filter(l => !mids.includes(l.goal_metric_id)); S.habitGoals = S.habitGoals.filter(x => x.goal_id !== id);
+    closeSheet(); commit(); if (route().name === 'goal') location.hash = '#/goals';
+  },
+  'delete-metric': async el => {
+    if (!confirm('Delete this metric and all its entries?')) return;
+    const id = el.dataset.id;
+    await db(sb.from('goal_metrics').delete().eq('id', id));
+    S.metrics = S.metrics.filter(m => m.id !== id); S.metricLogs = S.metricLogs.filter(l => l.goal_metric_id !== id);
+    closeSheet(); commit();
+  },
+  'goal-filter': el => { UI.goalFilter = el.dataset.v; render(); },
+  'ins-win': el => { UI.insWin = +el.dataset.v; render(); },
+  'toggle-archived': () => { UI.showArchived = !UI.showArchived; render(); },
+  'push-on': () => enablePush(),
+  'push-off': () => disablePush(),
+  'push-test': () => testPush(),
+  'dismiss-banner': () => { lsSet('willrot_banner_dismissed', true); $('#today-banner').innerHTML = ''; },
+  refresh: () => refresh(),
+  'hard-reload': async () => {
+    toast('Updating…');
+    try { const reg = await navigator.serviceWorker?.getRegistration(); await reg?.update(); const ks = await caches.keys(); await Promise.all(ks.map(k => caches.delete(k))); } catch {}
+    location.reload();
+  },
+  'sign-out': async () => {
+    if (Object.keys(OUTBOX).length && !confirm('Some check-ins haven’t synced yet and will be lost. Sign out anyway?')) return;
+    try { const reg = await navigator.serviceWorker?.getRegistration(); const sub = await reg?.pushManager?.getSubscription(); if (sub) { await sb.from('push_subscriptions').delete().eq('endpoint', sub.endpoint); await sub.unsubscribe(); } } catch {}
+    localStorage.removeItem(cacheKey()); localStorage.removeItem(outboxKey()); localStorage.removeItem('willrot_last_user');
+    await sb.auth.signOut();
+    S.user = null; showScreen('login');
+  },
+};
+
+document.addEventListener('click', e => {
+  // generic sheet controls
+  const segBtn = e.target.closest('.seg[data-name] button');
+  if (segBtn) {
+    $$('button', segBtn.parentElement).forEach(b => b.classList.toggle('on', b === segBtn));
+    const form = segBtn.closest('form');
+    if (segBtn.parentElement.dataset.name === 'type') $('.show-quantity', form)?.classList.toggle('hidden', segBtn.dataset.v !== 'quantity');
+    if (segBtn.parentElement.dataset.name === 'timeframe') { const p = periodFor(segBtn.dataset.v); if (p) { form.start_date.value = p[0]; form.end_date.value = p[1]; } }
+    return;
+  }
+  const chip = e.target.closest('.chips[data-multi] .chip');
+  if (chip) { chip.classList.toggle('on'); return; }
+  const step = e.target.closest('[data-step]');
+  if (step) { const i = step.parentElement.querySelector('input'); i.value = Math.max(0, (+i.value || 0) + +step.dataset.step); return; }
+  const fill = e.target.closest('[data-fill]');
+  if (fill) { fill.closest('form').value.value = +fill.dataset.fill || ''; return; }
+  const el = e.target.closest('[data-act]');
+  if (el && ACT[el.dataset.act]) { e.preventDefault(); ACT[el.dataset.act](el, e); }
+});
+document.addEventListener('change', async e => {
+  if (e.target.name === 'cadence_type') {
+    const f = e.target.form;
+    $$('.cad', f).forEach(x => x.classList.toggle('hidden', !x.classList.contains('cad-' + e.target.value)));
+  }
+  if (e.target.dataset.actChange === 'remind-hour') {
+    lsSet('willrot_remind_hour', +e.target.value);
+    const reg = await navigator.serviceWorker?.getRegistration(); const sub = await reg?.pushManager?.getSubscription();
+    if (sub) { await saveSubscription(sub).catch(() => {}); toast(`Reminder set for ${pad(+e.target.value)}:00`); }
+  }
+});
+window.addEventListener('hashchange', () => { render(); window.scrollTo(0, 0); });
+window.addEventListener('online', () => { flush(); refresh(); });
+window.addEventListener('offline', () => setSync('offline'));
+let lastDay = todayN();
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible' || !S.user) return;
+  if (todayN() !== lastDay) { lastDay = todayN(); render(); }
+  if (Date.now() - lastRefresh > 60000) refresh();
+});
+
+/* ============================================================
+   Auth + boot
+   ============================================================ */
+function showScreen(name) {
+  $$('.screen').forEach(s => s.classList.toggle('active', s.id === 'screen-' + name));
+  if (name !== 'app') closeSheet();
+}
+function enterApp(user) {
+  if (S.user?.id === user.id) return;
+  S.user = { id: user.id, email: user.email };
+  lsSet('willrot_last_user', S.user);
+  loadCache();
+  showScreen('app');
+  if (!location.hash) history.replaceState(null, '', '#/today');
+  render();
+  refresh();
+  syncPushSubscription();
+}
+
+let signUpMode = false;
+$('#login-mode').addEventListener('click', () => {
+  signUpMode = !signUpMode;
+  $('#login-title').textContent = signUpMode ? 'Create your account' : 'Welcome back';
+  $('#login-submit').textContent = signUpMode ? 'Create account' : 'Sign in';
+  $('#login-mode').textContent = signUpMode ? 'I already have an account' : 'Create an account';
+  $('#login-form').password.autocomplete = signUpMode ? 'new-password' : 'current-password';
+  setLoginMsg('');
+});
+$('#login-forgot').addEventListener('click', async () => {
+  const email = $('#login-form').email.value.trim();
+  if (!email) return setLoginMsg('Enter your email first.', true);
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+  setLoginMsg(error ? error.message : 'If that account exists, a reset link is on its way.', !!error);
+});
+function setLoginMsg(t, err) { const m = $('#login-msg'); m.textContent = t; m.className = 'msg ' + (err ? 'err' : 'ok'); }
+$('#login-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const f = e.target, email = f.email.value.trim(), password = f.password.value;
+  if (!email || password.length < 6) return setLoginMsg('Enter your email and a password of at least 6 characters.', true);
+  const btn = $('#login-submit'); btn.disabled = true; setLoginMsg('');
+  try {
+    if (signUpMode) {
+      const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: location.origin + location.pathname } });
+      if (error) return setLoginMsg(error.message, true);
+      if (data.session) enterApp(data.user);
+      else setLoginMsg('Check your inbox to confirm your email, then sign in.');
+    } else {
+      const { data, error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) return setLoginMsg(error.message === 'Invalid login credentials' ? 'Wrong email or password.' : error.message, true);
+      enterApp(data.user);
+    }
+  } catch (err) { setLoginMsg(isNetErr(err) ? 'You’re offline.' : String(err.message || err), true); }
+  finally { btn.disabled = false; }
+});
+
+async function boot() {
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW', e));
+  sb.auth.onAuthStateChange((event, session) => {
+    if (event === 'PASSWORD_RECOVERY') { if (session?.user) enterApp(session.user); setTimeout(passwordSheet, 300); }
+    else if (event === 'SIGNED_IN' && session?.user) enterApp(session.user);
+    else if (event === 'SIGNED_OUT') { S.user = null; showScreen('login'); }
+  });
+  let session = null;
+  try {
+    const res = await Promise.race([sb.auth.getSession(), new Promise(r => setTimeout(() => r({ timeout: true }), 6000))]);
+    session = res?.data?.session || null;
+  } catch (e) { console.warn(e); }
+  if (session?.user) return enterApp(session.user);
+  // Offline with a previously signed-in user: open from cache rather than locking them out.
+  const last = lsGet('willrot_last_user', null);
+  if (last && !navigator.onLine) return enterApp(last);
+  showScreen('login');
+}
+if (!window.__reloading) boot();
+</script>
+</body>
+</html>
