@@ -185,6 +185,9 @@ button.chip{font-size:14px;padding:8px 13px}
 .vbar .col.ember{background:var(--ember)}
 .vbar .col.ash{background:var(--ash)}
 .vbar .col.mid{background:#5C4A3C}
+.vbar .col.thin{background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--border)}
+.vbar .n{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-2);opacity:.7;margin-top:-4px}
+.card-title{font-size:13px;font-weight:700;color:var(--text-2);margin-bottom:2px}
 .vbar .v{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-2)}
 .vbar .l{font-size:11.5px;color:var(--text-2);font-weight:600}
 .hbars .hb{margin-top:12px}
@@ -270,7 +273,7 @@ button.chip{font-size:14px;padding:8px 13px}
 /* ============================================================
    Config
    ============================================================ */
-const APP_VERSION = '1.1.0'; // bump on every deploy (also bump VERSION in sw.js)
+const APP_VERSION = '1.2.0'; // bump on every deploy (also bump VERSION in sw.js)
 const SUPABASE_URL = 'https://rhfomdlzvwemtuczlwgu.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJoZm9tZGx6dndlbXR1Y3psd2d1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA4Njk3NTIsImV4cCI6MjEwNjQ0NTc1Mn0.2nAbsOgn4IQ3xQCUVanwbnBAI1k3h66ssnfI12SQb8M';
 const VAPID_PUBLIC_KEY = 'BHvqJ5md8shrnY0eTAUQFk2JrmLy3w7d5VMPW4UZFsWWUzINGIC40D0HfkqAJFirlWgqPi_KlHsYL0DCudJ4gYE';
@@ -895,7 +898,10 @@ function effortOutcomeChart(g, m) {
 function metricOnlyChart(m) { return effortOutcomeChart({ ...goalById(m.goal_id), id: '__none__' }, m); }
 
 function vbars(items) {
-  return `<div class="vbars">${items.map(i => `<div class="vbar"><span class="v">${i.v === null ? '–' : pct(i.v)}</span><div class="col ${i.cls || ''}" style="height:${i.v === null ? 3 : Math.max(3, i.v * 100)}%"></div><span class="l">${esc(i.label)}</span></div>`).join('')}</div>`;
+  return `<div class="vbars">${items.map(i => {
+    const h = i.h ?? i.v;
+    return `<div class="vbar"><span class="v">${i.text ?? (i.v === null ? '–' : pct(i.v))}</span><div class="col ${i.cls || ''}" style="height:${h === null ? 3 : Math.max(3, h * 100)}%"></div><span class="l">${esc(i.label)}</span>${i.sub !== undefined ? `<span class="n">${esc(i.sub)}</span>` : ''}</div>`;
+  }).join('')}</div>`;
 }
 function hbars(items) {
   return `<div class="hbars">${items.map(i => `<div class="hb"><div class="top"><span>${esc(i.label)}</span><span>${pct(i.v)}</span></div><div class="bar ${i.ash ? 'ash' : ''}"><i style="width:${(i.v || 0) * 100}%"></i></div></div>`).join('')}</div>`;
@@ -909,20 +915,43 @@ function viewInsights() {
   const hs = S.habits.filter(h => !h.archived);
   if (!hs.length) return html + `<div class="card empty" style="margin-top:14px"><h3>No data yet</h3><p>Insights appear once you've tracked a few days.</p></div>`;
 
-  // Day-of-week pattern (day-based habits only)
+  // Day of week, view 1: daily-scheduled habits — share of due check-ins done per weekday.
+  // A weekday needs MIN_DOW due check-ins before it is ranked; thinner days are greyed out.
+  const MIN_DOW = 3;
   const due = Array(7).fill(0), done = Array(7).fill(0);
   for (const h of hs.filter(h => !isWeekly(h))) {
     for (let n = Math.max(from, hStart(h)); n <= to; n++) if (isDue(h, n)) { due[wd(n)]++; if (doneOn(h, n)) done[wd(n)]++; }
   }
-  const dow = WD_ORDER.map(d => ({ d, label: WD[d][0] + WD[d].slice(1, 2), v: due[d] ? done[d] / due[d] : null }));
-  const valid = dow.filter(x => x.v !== null);
-  html += `<div class="sec"><h2>Day of week</h2></div><div class="card">`;
-  if (valid.length) {
-    const worst = valid.reduce((a, b) => b.v < a.v ? b : a), bestD = valid.reduce((a, b) => b.v > a.v ? b : a);
-    html += vbars(dow.map(x => ({ label: x.label, v: x.v, cls: x === worst && worst.v < 1 ? 'ash' : x === bestD ? 'ember' : 'mid' })));
-    html += `<p class="insight-line">${worst.v < 1 ? `You miss most on <b>${WD_LONG[worst.d]}s</b> (${pct(worst.v)} done). ` : ''}Strongest: <b>${WD_LONG[bestD.d]}s</b> (${pct(bestD.v)}).</p>`;
-  } else html += `<p class="muted small">Not enough finished days in this window yet.</p>`;
+  const short = d => WD[d].slice(0, 2);
+  const dow = WD_ORDER.map(d => ({ d, v: due[d] ? done[d] / due[d] : null, ok: due[d] >= MIN_DOW }));
+  const ranked = dow.filter(x => x.ok);
+  html += `<div class="sec"><h2>Day of week</h2></div><div class="card"><div class="card-title">Daily habits · % done</div>`;
+  if (dow.some(x => x.v !== null)) {
+    const worst = ranked.length ? ranked.reduce((a, b) => b.v < a.v ? b : a) : null;
+    const bestD = ranked.length ? ranked.reduce((a, b) => b.v > a.v ? b : a) : null;
+    html += vbars(dow.map(x => ({ label: short(x.d), v: x.v, sub: `${done[x.d]}/${due[x.d]}`,
+      cls: !x.ok ? 'thin' : x === worst && worst.v < 1 && ranked.length > 1 ? 'ash' : x === bestD ? 'ember' : 'mid' })));
+    html += ranked.length > 1
+      ? `<p class="insight-line">${worst.v < bestD.v ? `You miss most on <b>${WD_LONG[worst.d]}s</b> (${pct(worst.v)} done). ` : ''}Strongest: <b>${WD_LONG[bestD.d]}s</b> (${pct(bestD.v)}).</p>`
+      : `<p class="insight-line muted">Greyed days have fewer than ${MIN_DOW} scheduled check-ins yet, so they aren't ranked.</p>`;
+  } else html += `<p class="muted small">No daily-scheduled habits with finished days in this window.</p>`;
   html += `</div>`;
+
+  // Day of week, view 2: N-per-week habits have no due days, so show when the sessions actually happen.
+  const weeklyHs = hs.filter(isWeekly);
+  if (weeklyHs.length) {
+    const cnt = Array(7).fill(0);
+    for (const h of weeklyHs) for (let n = Math.max(from, hStart(h)); n <= Math.min(to, hEnd(h)); n++) if (doneOn(h, n)) cnt[wd(n)]++;
+    const total = cnt.reduce((a, b) => a + b, 0), max = Math.max(...cnt);
+    html += `<div class="card"><div class="card-title">Weekly habits · when you do them</div>`;
+    if (total) {
+      const top = WD_ORDER.reduce((a, d) => cnt[d] > cnt[a] ? d : a, WD_ORDER[0]);
+      const low = WD_ORDER.filter(d => cnt[d] === Math.min(...cnt));
+      html += vbars(WD_ORDER.map(d => ({ label: short(d), h: max ? cnt[d] / max : 0, text: String(cnt[d]), cls: d === top ? 'ember' : cnt[d] ? 'mid' : '' })));
+      html += `<p class="insight-line">${plural(total, 'session')} across ${weeklyHs.filter(h => countRange(h, Math.max(from, hStart(h)), Math.min(to, hEnd(h)))).map(h => esc(h.name)).join(', ')}. Most on <b>${WD_LONG[top]}s</b>${low.length < 7 && cnt[low[0]] === 0 ? `; never on ${low.map(d => `<b>${WD_LONG[d]}s</b>`).join(', ')}` : ''}.</p>`;
+    } else html += `<p class="muted small">No sessions logged in this window yet.</p>`;
+    html += `</div>`;
+  }
 
   // By goal
   const byGoal = S.goals.filter(g => g.status !== 'archived').map(g => ({ label: g.title, v: rate(linkedHabits(g).filter(h => !h.archived), from, to, to) })).filter(x => x.v !== null);
@@ -983,7 +1012,7 @@ function openSheet(html, onSubmit) {
   $('#sheet').classList.add('open'); $('#backdrop').classList.add('open');
   $('#sheet').scrollTop = 0;
 }
-function closeSheet() { $('#sheet').classList.remove('open'); $('#backdrop').classList.remove('open'); sheetSubmit = null; }
+function closeSheet() { $('#sheet').classList.remove('open'); $('#backdrop').classList.remove('open'); sheetSubmit = null; setTimeout(() => window.healViewport?.(), 300); }
 $('#backdrop').addEventListener('click', closeSheet);
 $('#sheet').addEventListener('submit', async e => {
   e.preventDefault(); if (!sheetSubmit) return;
@@ -1359,11 +1388,27 @@ document.addEventListener('change', async e => {
   }
 });
 window.addEventListener('hashchange', () => { render(); $('#scroller').scrollTop = 0; });
+
+/* iOS Home Screen apps: after the keyboard closes the viewport can stay shrunk until a force-quit,
+   leaving a dead band at the bottom. Toggling display on the full-height screen makes WebKit re-measure. */
+let fullH = innerHeight;
+addEventListener('resize', () => { fullH = Math.max(fullH, innerHeight); });
+addEventListener('orientationchange', () => setTimeout(() => { fullH = innerHeight; }, 400));
+function healViewport() {
+  if (innerHeight >= fullH - 4 || document.activeElement?.matches?.('input,textarea,select')) return;
+  const scr = $('.screen.active'), sc = $('#scroller'), top = sc ? sc.scrollTop : 0;
+  if (!scr) return;
+  scr.style.display = 'none'; void scr.offsetHeight; scr.style.display = '';
+  if (sc) sc.scrollTop = top;
+}
+document.addEventListener('focusout', e => { if (e.target.matches?.('input,textarea,select')) setTimeout(healViewport, 150); });
 window.addEventListener('online', () => { flush(); refresh(); });
 window.addEventListener('offline', () => setSync('offline'));
 let lastDay = todayN();
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState !== 'visible' || !S.user) return;
+  if (document.visibilityState !== 'visible') return;
+  setTimeout(healViewport, 100);
+  if (!S.user) return;
   if (todayN() !== lastDay) { lastDay = todayN(); render(); }
   if (Date.now() - lastRefresh > 60000) refresh();
 });
