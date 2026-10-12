@@ -1,5 +1,5 @@
 /* Willrot service worker — keep VERSION in sync with APP_VERSION in index.html */
-const VERSION = '1.3.0';
+const VERSION = '1.4.0';
 const SHELL = `willrot-shell-${VERSION}`;
 const RUNTIME = `willrot-runtime-${VERSION}`;
 const SHELL_FILES = [

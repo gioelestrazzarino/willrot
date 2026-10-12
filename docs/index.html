@@ -207,9 +207,10 @@ button.chip{font-size:14px;padding:8px 13px}
 /* ---------- sheet ---------- */
 .backdrop{position:absolute;inset:0;background:rgba(0,0,0,.6);z-index:50;opacity:0;pointer-events:none;transition:opacity .2s}
 .backdrop.open{opacity:1;pointer-events:auto}
-.sheet{position:absolute;left:0;right:0;bottom:0;z-index:60;max-height:92dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--surface);border-top:1px solid var(--border);border-radius:22px 22px 0 0;padding:10px 18px calc(22px + var(--sb));transform:translateY(105%);transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:60;max-height:calc(100% - var(--st) - 10px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;background:var(--surface);border-top:1px solid var(--border);border-radius:22px 22px 0 0;padding:10px 18px calc(22px + var(--sb));transform:translateY(105%);transition:transform .25s cubic-bezier(.2,.8,.2,1)}
 .sheet.open{transform:none}
 .sheet .grab{width:38px;height:5px;border-radius:9px;background:var(--border);margin:0 auto 14px}
+.sheet-x{position:absolute;top:10px;right:12px;width:34px;height:34px;border-radius:50%;background:var(--surface-2);color:var(--text-2);font-size:22px;line-height:1;display:grid;place-items:center}
 .sheet h3{font-size:20px;font-weight:800;margin-bottom:16px;letter-spacing:-.01em}
 .sheet .inner{max-width:560px;margin:0 auto}
 .fs{border:1px dashed var(--border);border-radius:14px;padding:14px;margin:6px 0 14px}
@@ -266,14 +267,14 @@ button.chip{font-size:14px;padding:8px 13px}
 </div>
 
 <div class="backdrop" id="backdrop"></div>
-<div class="sheet" id="sheet" role="dialog" aria-modal="true"><div class="grab"></div><div class="inner" id="sheet-body"></div></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true"><div class="grab"></div><button class="sheet-x" data-act="close-sheet" aria-label="Close">×</button><div class="inner" id="sheet-body"></div></div>
 <div class="toast" id="toast"></div>
 
 <script>
 /* ============================================================
    Config
    ============================================================ */
-const APP_VERSION = '1.3.0'; // bump on every deploy (also bump VERSION in sw.js)
+const APP_VERSION = '1.4.0'; // bump on every deploy (also bump VERSION in sw.js)
 const SUPABASE_URL = 'https://rhfomdlzvwemtuczlwgu.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJoZm9tZGx6dndlbXR1Y3psd2d1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA4Njk3NTIsImV4cCI6MjEwNjQ0NTc1Mn0.2nAbsOgn4IQ3xQCUVanwbnBAI1k3h66ssnfI12SQb8M';
 const VAPID_PUBLIC_KEY = 'BHvqJ5md8shrnY0eTAUQFk2JrmLy3w7d5VMPW4UZFsWWUzINGIC40D0HfkqAJFirlWgqPi_KlHsYL0DCudJ4gYE';
@@ -336,19 +337,11 @@ const isNetErr = e => !navigator.onLine || /fetch|network|load failed|timed? ?ou
 const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
 
-/* Screen fit: iOS 26 Home Screen apps can report a viewport shorter than the screen, leaving a strip
-   under the nav. Temporary switch to find which height measure matches this phone. */
-const FITS = { auto: '100%', vh: '100vh', lvh: '100lvh', dvh: '100dvh' };
-const fitMode = () => FITS[lsGet('willrot_fit', 'auto')] ? lsGet('willrot_fit', 'auto') : 'auto';
-function applyFit() { document.documentElement.style.setProperty('--app-h', FITS[fitMode()]); }
-applyFit();
-function screenInfo() {
-  const probe = css => { const d = document.createElement('div'); d.style.cssText = 'position:absolute;visibility:hidden;top:0;left:0;width:1px;' + css; document.body.appendChild(d); const h = d.offsetHeight; d.remove(); return h; };
-  const vv = window.visualViewport ? Math.round(visualViewport.height) : '-';
-  return [`screen ${screen.width}x${screen.height}`, `inner ${innerHeight}`, `outer ${outerHeight}`, `vv ${vv}`, `client ${document.documentElement.clientHeight}`,
-    `vh ${probe('height:100vh')}`, `lvh ${probe('height:100lvh')}`, `svh ${probe('height:100svh')}`, `dvh ${probe('height:100dvh')}`,
-    `app ${$('#screen-app')?.offsetHeight}`, `safe ${probe('height:env(safe-area-inset-top)')}/${probe('height:env(safe-area-inset-bottom)')}`,
-    isStandalone() ? 'home-screen' : 'browser', `fit ${fitMode()}`].join(' · ');
+/* iOS 26 Home Screen apps report a viewport ~47pt shorter than the screen (innerHeight 797 vs 844 on
+   Gioele's iPhone), leaving a dead strip under the nav. The large-viewport unit measured the full screen in
+   every test, so the Home Screen app uses it. In a Safari tab keep 100%, or the nav would sit under Safari's toolbar. */
+if (matchMedia('(display-mode: standalone)').matches || navigator.standalone === true) {
+  document.documentElement.style.setProperty('--app-h', '100lvh');
 }
 
 /* ============================================================
@@ -653,7 +646,7 @@ function render() {
   $('#view').innerHTML = v(r.id);
   $$('.hm-scroll').forEach(el => { el.scrollLeft = el.scrollWidth; });
   if (r.name === 'today') fillTodayBanner();
-  if (r.name === 'settings') { fillPushCard(); requestAnimationFrame(() => { const el = $('#screen-info'); if (el) el.textContent = screenInfo(); }); }
+  if (r.name === 'settings') fillPushCard();
 }
 
 /* ---------- Today ---------- */
@@ -1011,12 +1004,6 @@ function viewSettings() {
     ${S.goals.length ? `<div class="list">${S.goals.map(g => `<button class="row" style="width:100%;text-align:left" data-act="edit-goal" data-id="${g.id}"><div class="row-main"><div class="row-title">${esc(g.title)} ${statusChip(g)}</div><div class="row-meta">${esc(timeframeLabel(g))}${metricsOf(g).length ? ' · ' + plural(metricsOf(g).length, 'metric') : ''}</div></div><span class="chev">›</span></button>`).join('')}</div>` : `<div class="card muted small">No goals yet.</div>`}
     <div class="sec"><h2>Reminders</h2></div>
     <div class="card" id="push-card"><span class="muted small">Checking…</span></div>
-    <div class="sec"><h2>Screen fit (temporary)</h2></div>
-    <div class="card">
-      <p class="small muted" style="margin-bottom:10px">Tap each option. Keep the one where the menu bar sits right on the bottom edge with no empty strip under it, then send a screenshot of this card.</p>
-      <div class="seg">${Object.keys(FITS).map((k, i) => `<button class="${k === fitMode() ? 'on' : ''}" data-act="fit" data-v="${k}">${'ABCD'[i]}</button>`).join('')}</div>
-      <p class="mono" style="font-size:11px;color:var(--text-2);margin-top:10px;word-break:break-word" id="screen-info"></p>
-    </div>
     <div class="sec"><h2>App</h2></div>
     <div class="card">
       <div style="display:flex;justify-content:space-between"><span class="muted">Version</span><span class="mono">${APP_VERSION}</span></div>
@@ -1033,6 +1020,40 @@ function openSheet(html, onSubmit) {
   $('#sheet').classList.add('open'); $('#backdrop').classList.add('open');
   $('#sheet').scrollTop = 0;
 }
+/* Swipe the sheet down to dismiss it (like iOS). Dragging starts only when the form is scrolled to the top,
+   so pulling down inside a long form scrolls it back up first. */
+(function sheetSwipe() {
+  const sh = $('#sheet'), bd = $('#backdrop');
+  let y0 = null, dy = 0, dragging = false, t0 = 0;
+  sh.addEventListener('touchstart', e => { y0 = e.touches.length === 1 ? e.touches[0].clientY : null; dy = 0; dragging = false; }, { passive: true });
+  sh.addEventListener('touchmove', e => {
+    if (y0 === null) return;
+    const y = e.touches[0].clientY;
+    if (!dragging) {
+      if (y <= y0 || sh.scrollTop > 0) { if (sh.scrollTop > 0) y0 = y; return; }
+      e.preventDefault();
+      if (y - y0 < 8) return;
+      dragging = true; y0 = y; t0 = Date.now();
+      sh.style.transition = 'none'; bd.style.transition = 'none';
+      document.activeElement?.blur?.();
+    }
+    e.preventDefault();
+    dy = Math.max(0, y - y0);
+    sh.style.transform = `translateY(${dy}px)`;
+    bd.style.opacity = String(Math.max(0, 1 - dy / sh.offsetHeight));
+  }, { passive: false });
+  const end = () => {
+    if (dragging) {
+      const fast = dy / Math.max(1, Date.now() - t0) > 0.5;
+      sh.style.transition = ''; bd.style.transition = '';
+      if (dy > Math.min(150, sh.offsetHeight * 0.3) || (fast && dy > 40)) closeSheet();
+      sh.style.transform = ''; bd.style.opacity = '';
+    }
+    y0 = null; dragging = false;
+  };
+  sh.addEventListener('touchend', end);
+  sh.addEventListener('touchcancel', end);
+})();
 function closeSheet() { $('#sheet').classList.remove('open'); $('#backdrop').classList.remove('open'); sheetSubmit = null; setTimeout(() => window.healViewport?.(), 300); }
 $('#backdrop').addEventListener('click', closeSheet);
 $('#sheet').addEventListener('submit', async e => {
@@ -1350,8 +1371,8 @@ const ACT = {
     S.metrics = S.metrics.filter(m => m.id !== id); S.metricLogs = S.metricLogs.filter(l => l.goal_metric_id !== id);
     closeSheet(); commit();
   },
+  'close-sheet': () => closeSheet(),
   'goal-filter': el => { UI.goalFilter = el.dataset.v; render(); },
-  fit: el => { lsSet('willrot_fit', el.dataset.v); applyFit(); setTimeout(render, 50); },
   'goal-outcome': async el => {
     const saved = await db(sb.from('goals').update({ status: el.dataset.v }).eq('id', el.dataset.id).select().single());
     S.goals = S.goals.map(x => x.id === saved.id ? saved : x); commit();
