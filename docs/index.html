@@ -111,7 +111,8 @@ button.chip{font-size:14px;padding:8px 13px}
 .bar{height:6px;border-radius:99px;background:var(--surface-2);overflow:hidden}
 .bar>i{display:block;height:100%;background:var(--ember);border-radius:99px}
 .bar.ash>i{background:var(--ash)}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.grid2 input{min-width:0}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .stat{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px}
 .stat b{display:block;font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;line-height:1.15}
@@ -274,7 +275,7 @@ button.chip{font-size:14px;padding:8px 13px}
 /* ============================================================
    Config
    ============================================================ */
-const APP_VERSION = '1.4.0'; // bump on every deploy (also bump VERSION in sw.js)
+const APP_VERSION = '1.4.1'; // bump on every deploy (also bump VERSION in sw.js)
 const SUPABASE_URL = 'https://rhfomdlzvwemtuczlwgu.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJoZm9tZGx6dndlbXR1Y3psd2d1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA4Njk3NTIsImV4cCI6MjEwNjQ0NTc1Mn0.2nAbsOgn4IQ3xQCUVanwbnBAI1k3h66ssnfI12SQb8M';
 const VAPID_PUBLIC_KEY = 'BHvqJ5md8shrnY0eTAUQFk2JrmLy3w7d5VMPW4UZFsWWUzINGIC40D0HfkqAJFirlWgqPi_KlHsYL0DCudJ4gYE';
