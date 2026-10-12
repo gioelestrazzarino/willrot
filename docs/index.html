@@ -7,7 +7,7 @@
 <meta name="color-scheme" content="dark">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Willrot">
 <meta name="description" content="Willrot — habit and goal consistency tracker.">
 <title>Willrot</title>
@@ -27,13 +27,14 @@
   --r:16px; --st:env(safe-area-inset-top,0px); --sb:env(safe-area-inset-bottom,0px);
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html{-webkit-text-size-adjust:100%;background:var(--bg)}
-body{background:var(--bg);color:var(--text);font-family:'Plus Jakarta Sans',system-ui,-apple-system,sans-serif;font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased;min-height:100vh;min-height:100dvh;overscroll-behavior-y:none}
+html{-webkit-text-size-adjust:100%;background:var(--bg);height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:'Plus Jakarta Sans',system-ui,-apple-system,sans-serif;font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased;height:100%;overflow:hidden;position:relative;overscroll-behavior:none}
 a{color:inherit;text-decoration:none}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
 input,select,textarea{font:inherit;font-size:16px;color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:12px 14px;width:100%;outline:none;-webkit-appearance:none;appearance:none}
 select{background-image:linear-gradient(45deg,transparent 50%,var(--text-2) 50%),linear-gradient(135deg,var(--text-2) 50%,transparent 50%);background-position:calc(100% - 18px) 52%,calc(100% - 13px) 52%;background-size:5px 5px;background-repeat:no-repeat;padding-right:34px}
 input[type=date]{min-height:48px}
+input[readonly]{color:var(--text-2);background:var(--surface-2)}
 textarea{resize:vertical;min-height:72px}
 input:focus,select:focus,textarea:focus{border-color:var(--ember)}
 input[type=checkbox]{width:auto}
@@ -47,10 +48,10 @@ input[type=checkbox]{width:auto}
 .screen{display:none}
 .screen.active{display:block}
 #screen-loading.active,#screen-login.active{display:flex}
-#screen-loading{min-height:100dvh;align-items:center;justify-content:center;flex-direction:column;gap:18px}
+#screen-loading{height:100%;align-items:center;justify-content:center;flex-direction:column;gap:18px}
 #screen-loading .logo{width:72px;height:72px;animation:pulse 1.6s ease-in-out infinite}
 @keyframes pulse{0%,100%{opacity:.55;transform:scale(.97)}50%{opacity:1;transform:scale(1)}}
-#screen-login{min-height:100dvh;align-items:center;justify-content:center;padding:calc(24px + var(--st)) 20px calc(24px + var(--sb))}
+#screen-login{height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;align-items:center;justify-content:center;padding:calc(24px + var(--st)) 20px calc(24px + var(--sb))}
 .login-box{width:100%;max-width:380px}
 .login-box .logo{width:64px;height:64px;margin-bottom:20px}
 .login-box h1{font-size:30px;font-weight:800;letter-spacing:-.02em}
@@ -64,7 +65,9 @@ input[type=checkbox]{width:auto}
 
 /* ---------- app shell ---------- */
 .wrap{max-width:560px;margin:0 auto}
-.topbar{position:sticky;top:0;z-index:20;background:rgba(18,17,16,.88);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);padding:calc(10px + var(--st)) 16px 10px;border-bottom:1px solid transparent}
+#screen-app.active{display:flex;flex-direction:column;height:100%}
+.topbar{flex:none;z-index:20;background:var(--bg);padding:calc(10px + var(--st)) 16px 10px;border-bottom:1px solid var(--border)}
+#scroller{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain}
 .topbar .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:34px}
 .brand{display:flex;align-items:center;gap:9px;font-weight:800;font-size:17px;letter-spacing:-.01em}
 .brand svg{width:24px;height:24px}
@@ -72,8 +75,8 @@ input[type=checkbox]{width:auto}
 .sync i{width:7px;height:7px;border-radius:50%;background:var(--border)}
 .sync.syncing i{background:var(--ember);animation:pulse 1s infinite}
 .sync.pending i,.sync.offline i,.sync.error i{background:var(--ash)}
-#view{padding:8px 16px calc(96px + var(--sb))}
-.nav{position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(28,25,22,.94);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top:1px solid var(--border);padding-bottom:var(--sb)}
+#view{padding:8px 16px 28px}
+.nav{flex:none;z-index:30;background:var(--surface);border-top:1px solid var(--border);padding-bottom:max(var(--sb),4px)}
 .nav .wrap{display:grid;grid-template-columns:repeat(4,1fr)}
 .nav a{display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 0 9px;font-size:11px;font-weight:600;color:var(--text-2)}
 .nav a svg{width:22px;height:22px}
@@ -199,9 +202,9 @@ button.chip{font-size:14px;padding:8px 13px}
 .mlog button{color:var(--text-2);padding:2px 8px;font-size:18px}
 
 /* ---------- sheet ---------- */
-.backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:50;opacity:0;pointer-events:none;transition:opacity .2s}
+.backdrop{position:absolute;inset:0;background:rgba(0,0,0,.6);z-index:50;opacity:0;pointer-events:none;transition:opacity .2s}
 .backdrop.open{opacity:1;pointer-events:auto}
-.sheet{position:fixed;left:0;right:0;bottom:0;z-index:60;max-height:92dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--surface);border-top:1px solid var(--border);border-radius:22px 22px 0 0;padding:10px 18px calc(22px + var(--sb));transform:translateY(105%);transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:60;max-height:92dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--surface);border-top:1px solid var(--border);border-radius:22px 22px 0 0;padding:10px 18px calc(22px + var(--sb));transform:translateY(105%);transition:transform .25s cubic-bezier(.2,.8,.2,1)}
 .sheet.open{transform:none}
 .sheet .grab{width:38px;height:5px;border-radius:9px;background:var(--border);margin:0 auto 14px}
 .sheet h3{font-size:20px;font-weight:800;margin-bottom:16px;letter-spacing:-.01em}
@@ -213,7 +216,7 @@ button.chip{font-size:14px;padding:8px 13px}
 .stepper input{text-align:center;font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;height:52px}
 .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:6px 2px 14px;font-weight:600}
 .toggle-row input{width:22px;height:22px;accent-color:var(--ember);-webkit-appearance:checkbox;appearance:auto}
-.toast{position:fixed;left:50%;bottom:calc(84px + var(--sb));transform:translateX(-50%) translateY(20px);background:var(--text);color:var(--bg);font-weight:600;font-size:14px;padding:10px 16px;border-radius:12px;z-index:80;opacity:0;pointer-events:none;transition:all .2s;max-width:calc(100% - 32px)}
+.toast{position:absolute;left:50%;bottom:calc(84px + var(--sb));transform:translateX(-50%) translateY(20px);background:var(--text);color:var(--bg);font-weight:600;font-size:14px;padding:10px 16px;border-radius:12px;z-index:80;opacity:0;pointer-events:none;transition:all .2s;max-width:calc(100% - 32px)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
 </head>
@@ -250,7 +253,7 @@ button.chip{font-size:14px;padding:8px 13px}
     <div class="brand"><svg viewBox="0 0 100 100" aria-hidden="true"><clipPath id="lp3"><rect x="38" y="12" width="24" height="76" rx="12"/></clipPath><g clip-path="url(#lp3)"><rect x="36" y="10" width="28" height="40" fill="#E2501C"/><rect x="36" y="50" width="28" height="40" fill="#7A3228"/></g></svg>Willrot</div>
     <button class="sync" id="sync" data-act="refresh" aria-label="Sync now"><i></i><span id="sync-label"></span></button>
   </div></header>
-  <main id="view" class="wrap"></main>
+  <main id="scroller"><div id="view" class="wrap"></div></main>
   <nav class="nav"><div class="wrap">
     <a href="#/today" data-tab="today"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.6 2.6L16 9.6"/></svg>Today</a>
     <a href="#/goals" data-tab="goals"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>Goals</a>
@@ -267,7 +270,7 @@ button.chip{font-size:14px;padding:8px 13px}
 /* ============================================================
    Config
    ============================================================ */
-const APP_VERSION = '1.0.0'; // bump on every deploy (also bump VERSION in sw.js)
+const APP_VERSION = '1.1.0'; // bump on every deploy (also bump VERSION in sw.js)
 const SUPABASE_URL = 'https://rhfomdlzvwemtuczlwgu.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJoZm9tZGx6dndlbXR1Y3psd2d1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA4Njk3NTIsImV4cCI6MjEwNjQ0NTc1Mn0.2nAbsOgn4IQ3xQCUVanwbnBAI1k3h66ssnfI12SQb8M';
 const VAPID_PUBLIC_KEY = 'BHvqJ5md8shrnY0eTAUQFk2JrmLy3w7d5VMPW4UZFsWWUzINGIC40D0HfkqAJFirlWgqPi_KlHsYL0DCudJ4gYE';
@@ -448,10 +451,13 @@ const isWeekly = h => h.cadence_type === 'n_per_week';
 const weeklyN = h => Math.max(1, Math.min(7, +cfg(h).n || 1));
 const habitById = id => S.habits.find(h => h.id === id);
 const goalById = id => S.goals.find(g => g.id === id);
+const hEnd = h => h.end_date ? dnum(h.end_date) : Infinity;
+const isFinished = h => hEnd(h) < todayN();
+const isLive = h => !h.archived && !isFinished(h);
 
 function isDue(h, n) {
   const s = hStart(h);
-  if (n < s) return false;
+  if (n < s || n > hEnd(h)) return false;
   switch (h.cadence_type) {
     case 'daily': return true;
     case 'every_n_days': return (n - s) % Math.max(1, +cfg(h).n || 1) === 0;
@@ -474,20 +480,32 @@ const progressOn = (h, n) => {
 function countRange(h, a, b) { let c = 0; for (let n = a; n <= b; n++) if (doneOn(h, n)) c++; return c; }
 const weekCount = (h, ws) => countRange(h, ws, Math.min(ws + 6, todayN()));
 
-/** Consecutive scheduled periods completed, newest first. An unfinished today never breaks it. */
+/**
+ * One week of an N-per-week habit. `need` is N, or fewer when the habit starts/ends mid-week
+ * (can't need more sessions than available days). `c` is sessions done, capped at `need`.
+ * `open` = the week hasn't finished yet; an open week only counts once its target is met.
+ */
+function weekScore(h, ws) {
+  const s = hStart(h), e = hEnd(h), t = todayN();
+  const lo = Math.max(ws, s), hi = Math.min(ws + 6, e);
+  const need = Math.min(weeklyN(h), hi - lo + 1);
+  if (need <= 0) return null;
+  const c = Math.min(countRange(h, lo, Math.min(hi, t)), need);
+  return { need, c, met: c >= need, open: hi >= t };
+}
+
+/** Consecutive scheduled periods completed, newest first. An unfinished today / week never breaks it. */
 function habitStreak(h) {
-  const t = todayN(), s = hStart(h);
+  const t = todayN(), s = hStart(h), last = Math.min(t, hEnd(h));
+  let streak = 0;
   if (isWeekly(h)) {
-    const N = weeklyN(h); let ws = weekStart(t), streak = 0;
-    if (weekCount(h, ws) >= N) streak++;        // current week counts once met; never breaks while in progress
-    for (ws -= 7; ws + 6 >= s; ws -= 7) {
-      const need = Math.min(N, ws + 6 - Math.max(ws, s) + 1); // first partial week: pro-rate
-      if (countRange(h, ws, ws + 6) >= need) streak++; else break;
+    for (let ws = weekStart(last); ws + 6 >= s; ws -= 7) {
+      const w = weekScore(h, ws); if (!w) continue;
+      if (w.met) streak++; else if (w.open) continue; else break;
     }
     return streak;
   }
-  let streak = 0;
-  for (let n = t; n >= s; n--) {
+  for (let n = last; n >= s; n--) {
     if (!isDue(h, n)) continue;
     if (doneOn(h, n)) streak++;
     else if (n === t) continue;
@@ -496,17 +514,15 @@ function habitStreak(h) {
   return streak;
 }
 function bestStreak(h) {
-  const t = todayN(), s = hStart(h); let best = 0, cur = 0;
+  const t = todayN(), s = hStart(h), last = Math.min(t, hEnd(h)); let best = 0, cur = 0;
   if (isWeekly(h)) {
-    const N = weeklyN(h);
-    for (let ws = weekStart(s); ws <= t; ws += 7) {
-      const need = Math.min(N, ws + 6 - Math.max(ws, s) + 1);
-      if (countRange(h, ws, Math.min(ws + 6, t)) >= need) best = Math.max(best, ++cur);
-      else if (ws + 6 < t) cur = 0;
+    for (let ws = weekStart(s); ws <= last; ws += 7) {
+      const w = weekScore(h, ws); if (!w) continue;
+      if (w.met) best = Math.max(best, ++cur); else if (!w.open) cur = 0;
     }
     return best;
   }
-  for (let n = s; n <= t; n++) {
+  for (let n = s; n <= last; n++) {
     if (!isDue(h, n)) continue;
     if (doneOn(h, n)) best = Math.max(best, ++cur); else if (n !== t) cur = 0;
   }
@@ -526,22 +542,28 @@ function perfectDays() {
   return { current, best: Math.max(best, current) };
 }
 
-/** Completion rate of a set of habits over [from, to]. Today counts only if done; weekly habits are pro-rated. */
-function rate(hs, from, to) {
+/**
+ * Completion rate = what you did ÷ what you had to do, over [from, to] (to may be in the future).
+ * Day-based habits: each due day counts; today only once it's done; days after `last` are ignored.
+ * N-per-week habits: scored in whole weeks (sessions done, capped at N ÷ N). A week belongs to the
+ * range holding its Thursday (= the month with most of its days). An unfinished week only counts
+ * once its target is met, so an in-progress week can raise the % but never lower it.
+ */
+function rate(hs, from, to, last = todayN()) {
   const t = todayN(); let due = 0, done = 0;
   for (const h of hs) {
-    const s = hStart(h), a = Math.max(from, s), b = Math.min(to, t);
-    if (a > b) continue;
+    const s = hStart(h), e = hEnd(h);
     if (isWeekly(h)) {
-      const N = weeklyN(h);
-      for (let ws = weekStart(a); ws <= b; ws += 7) {
-        const lo = Math.max(ws, a), hi = Math.min(ws + 6, b); if (lo > hi) continue;
-        const req = N * (hi - lo + 1) / 7, c = Math.min(countRange(h, lo, hi), req);
-        if (ws + 6 >= t && c < req) { due += c; done += c; continue; } // current week still in progress
-        due += req; done += c;
+      const endWs = weekStart(Math.min(to, e, t));
+      for (let ws = weekStart(Math.max(from, s)); ws <= endWs; ws += 7) {
+        if (ws + 3 < from || ws + 3 > to) continue;
+        const w = weekScore(h, ws); if (!w) continue;
+        if (w.open && !w.met) continue;
+        due += w.need; done += w.c;
       }
     } else {
-      for (let n = a; n <= b; n++) {
+      const b = Math.min(to, e, last, t);
+      for (let n = Math.max(from, s); n <= b; n++) {
         if (!isDue(h, n)) continue;
         const d = doneOn(h, n);
         if (n === t && !d) continue;
@@ -581,7 +603,7 @@ function metricProgress(m) {
   if (target === null || target === start) return { current, p: null };
   return { current, p: clamp01((current - start) / (target - start)) };
 }
-const goalEffort = g => { const t = todayN(); const to = goalTo(g); return rate(linkedHabits(g), goalFrom(g), to === null ? t : Math.min(to, t)); };
+const goalEffort = g => rate(linkedHabits(g), goalFrom(g), goalTo(g) ?? Infinity);
 function timeframeLabel(g) {
   const f = g.start_date ? fmtDay(dnum(g.start_date), { month: 'short', day: 'numeric', year: 'numeric' }) : null;
   const e = g.end_date ? fmtDay(dnum(g.end_date), { month: 'short', day: 'numeric', year: 'numeric' }) : null;
@@ -619,7 +641,7 @@ function render() {
 /* ---------- Today ---------- */
 function viewToday() {
   const t = todayN();
-  const active = S.habits.filter(h => !h.archived);
+  const active = S.habits.filter(isLive);
   const dayHs = active.filter(h => !isWeekly(h));
   const weekly = active.filter(isWeekly);
   const due = dayHs.filter(h => isDue(h, t));
@@ -633,7 +655,7 @@ function viewToday() {
     <div class="num ${current ? '' : 'zero'}" aria-label="${current} perfect days">${current}</div>
     <div class="label">${current === 1 ? 'perfect day' : 'perfect days'} in a row</div>
     <div class="best">${best > current ? `Best ${best} · ` : ''}today counts once it's over</div>
-  </section>`;
+  </section>${goalReviewCards()}`;
 
   if (!active.length) {
     return html + `<div id="today-banner"></div><div class="card empty" style="margin-top:20px">
@@ -681,7 +703,7 @@ function viewHabit(id) {
   const r30 = rate([h], t - 29, t);
   let html = `<a class="back" href="javascript:history.length>1?history.back():location.hash='#/today'">‹ Back</a>
     <h1 class="page">${esc(h.name)}</h1>
-    <p class="sub">${esc(cadenceLabel(h))}${h.type === 'quantity' ? ` · target ${fmtNum(h.target_value)} ${esc(h.unit || '')}` : ''}${h.archived ? ' · archived' : ''}</p>
+    <p class="sub">${esc(cadenceLabel(h))}${h.type === 'quantity' ? ` · target ${fmtNum(h.target_value)} ${esc(h.unit || '')}` : ''}${h.archived ? ' · archived' : ''}${h.end_date ? (isFinished(h) ? ` · finished ${esc(fmtDay(hEnd(h), { month: 'short', day: 'numeric', year: 'numeric' }))}` : ` · until ${esc(fmtDay(hEnd(h), { month: 'short', day: 'numeric', year: 'numeric' }))}`) : ''}</p>
     ${goals.length ? `<div class="chips" style="margin-top:10px">${goals.map(g => `<a class="chip" href="#/goal/${g.id}">◎ ${esc(g.title)}</a>`).join('')}</div>` : ''}
     <div class="grid3" style="margin-top:18px">
       <div class="stat"><b class="ember">${habitStreak(h)}</b><span>Streak${isWeekly(h) ? ' (weeks)' : ''}</span></div>
@@ -689,9 +711,7 @@ function viewHabit(id) {
       <div class="stat"><b>${pct(r30)}</b><span>Last 30 days</span></div>
     </div>`;
 
-  if (!isWeekly(h) && !h.archived && isDue(h, t)) {
-    html += `<div class="list" style="margin-top:12px">${habitRow(h, t)}</div>`;
-  } else if (isWeekly(h) && !h.archived) html += `<div class="list" style="margin-top:12px">${habitRow(h, t)}</div>`;
+  if (isLive(h) && (isWeekly(h) || isDue(h, t))) html += `<div class="list" style="margin-top:12px">${habitRow(h, t)}</div>`;
 
   html += `<div class="sec"><h2>Last 12 months</h2><span class="muted small">Tap a day to edit</span></div>
     <div class="card">${heatmap(h)}
@@ -704,7 +724,7 @@ function viewHabit(id) {
     const y = ty - (tm - i < 0 ? 1 : 0), m = (tm - i + 12) % 12;
     const a = monthStart(y, m), b = monthEnd(y, m);
     if (b < s) break;
-    rows.push({ label: fmtMonth(y, m, true), r: rate([h], a, Math.min(b, t)) });
+    rows.push({ label: fmtMonth(y, m, true), r: rate([h], a, b) });
   }
   html += `<div class="sec"><h2>Monthly completion</h2></div><div class="card hbars">${rows.map(x => `
     <div class="hb"><div class="top"><span>${esc(x.label)}</span><span>${pct(x.r)}</span></div><div class="bar"><i style="width:${(x.r || 0) * 100}%"></i></div></div>`).join('') || '<p class="muted">No data yet.</p>'}</div>
@@ -723,14 +743,14 @@ function heatmap(h) {
     for (let i = 0; i < 7; i++) {
       const n = ws + i;
       let cls = 'void', style = '';
-      if (n >= s && n <= t) {
+      if (n >= s && n <= Math.min(t, hEnd(h))) {
         const p = progressOn(h, n), done = doneOn(h, n);
         if (isWeekly(h)) cls = done ? 'on' : p > 0 ? 'on' : 'rest';
         else if (isDue(h, n)) cls = done ? 'on' : p > 0 ? 'on' : n === t ? 'pend' : 'miss';
         else cls = done || p > 0 ? 'on' : 'rest';
         if (cls === 'on' && !done) style = `style="opacity:${(0.3 + 0.6 * p).toFixed(2)}"`;
       }
-      const tappable = n >= s && n <= t;
+      const tappable = n >= s && n <= Math.min(t, hEnd(h));
       cells += `<i class="c ${cls}${n === t ? ' today' : ''}" ${style} ${tappable ? `data-act="day" data-id="${h.id}" data-n="${n}" title="${fmtDay(n)}"` : ''}></i>`;
     }
     cols += `<div class="hm-col">${cells}</div>`;
@@ -739,14 +759,35 @@ function heatmap(h) {
   return `<div class="hm-scroll"><div class="hm-wrap">${days}${cols}</div></div>`;
 }
 
+/* ---------- Goal status + end-of-goal review ---------- */
+const STATUS_LABEL = { active: 'Active', completed: 'Completed', missed: 'Missed', archived: 'Archived' };
+const needsReview = g => g.status === 'active' && goalTo(g) !== null && goalTo(g) < todayN();
+function statusChip(g) {
+  if (needsReview(g)) return '<span class="chip on">Ended · review</span>';
+  if (g.status === 'completed') return '<span class="chip on">Completed</span>';
+  if (g.status === 'missed') return '<span class="chip ash">Missed</span>';
+  if (g.status === 'archived') return '<span class="chip">Archived</span>';
+  return '';
+}
+const reviewCard = g => `<div class="banner" style="flex-wrap:wrap"><p><b>“${esc(g.title)}” ended on ${esc(fmtDay(goalTo(g), { month: 'short', day: 'numeric' }))}</b>Effort ${pct(goalEffort(g))}. Did you hit it?</p>
+  <div class="btns" style="width:100%;margin-top:4px"><button class="btn sm" data-act="goal-outcome" data-id="${g.id}" data-v="completed">Yes, completed</button><button class="btn sm ghost" data-act="goal-outcome" data-id="${g.id}" data-v="missed">Missed it</button></div></div>`;
+const goalReviewCards = () => S.goals.filter(needsReview).map(reviewCard).join('');
+function syncGoalEnd(form) {
+  const kind = segVal(form, 'timeframe'), end = form.end_date;
+  end.readOnly = kind !== 'custom';
+  const e = endFor(kind, form.start_date.value); if (e) end.value = e;
+  const hint = $('#tf-hint', form); if (hint) hint.textContent = kind === 'custom' ? 'Pick both dates.' : 'End date follows the start date.';
+}
+
 /* ---------- Goals ---------- */
 function viewGoals() {
   const f = UI.goalFilter;
-  const goals = S.goals.filter(g => g.status === f);
+  const goals = S.goals.filter(g => f === 'done' ? (g.status === 'completed' || g.status === 'missed') : g.status === f);
   let html = `<h1 class="page">Goals</h1><p class="sub">What the habits are for.</p>
-    <div class="seg" style="margin:16px 0 4px">${['active', 'completed', 'archived'].map(s => `<button class="${s === f ? 'on' : ''}" data-act="goal-filter" data-v="${s}">${s[0].toUpperCase() + s.slice(1)}</button>`).join('')}</div>`;
+    <div class="seg" style="margin:16px 0 4px">${[['active', 'Active'], ['done', 'Done'], ['archived', 'Archived']].map(([v, l]) => `<button class="${v === f ? 'on' : ''}" data-act="goal-filter" data-v="${v}">${l}</button>`).join('')}</div>`;
+  if (f === 'active') html += goalReviewCards();
   if (!goals.length) {
-    html += `<div class="card empty" style="margin-top:14px"><h3>No ${f} goals</h3><p>${f === 'active' ? 'Set a goal, link habits to it, and optionally track a number that tells you whether it is working.' : ''}</p>${f === 'active' ? '<button class="btn" data-act="new-goal">New goal</button>' : ''}</div>`;
+    html += `<div class="card empty" style="margin-top:14px"><h3>No ${f === 'done' ? 'finished' : f} goals</h3><p>${f === 'active' ? 'Set a goal, link habits to it, and optionally track a number that tells you whether it is working.' : ''}</p>${f === 'active' ? '<button class="btn" data-act="new-goal">New goal</button>' : ''}</div>`;
     return html;
   }
   html += goals.map(goalCard).join('');
@@ -758,7 +799,7 @@ function goalCard(g) {
   const m = metricsOf(g)[0], mp = m ? metricProgress(m) : null;
   return `<a class="card" style="display:block;margin-top:12px" href="#/goal/${g.id}">
     <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
-      <div style="min-width:0"><div style="font-weight:800;font-size:16.5px">${esc(g.title)}</div><div class="muted small">${esc(timeframeLabel(g))}</div></div>
+      <div style="min-width:0"><div style="font-weight:800;font-size:16.5px">${esc(g.title)} ${statusChip(g)}</div><div class="muted small">${esc(timeframeLabel(g))}</div></div>
       <span class="chev">›</span></div>
     <div class="grid2" style="margin-top:12px">
       <div><div class="small muted">Effort</div><div class="mono" style="font-weight:700;font-size:18px">${pct(eff)}</div></div>
@@ -778,7 +819,8 @@ function viewGoal(id) {
 
   let html = `<a class="back" href="#/goals">‹ Goals</a>
     <h1 class="page">${esc(g.title)}</h1>
-    <p class="sub">${esc(timeframeLabel(g))} · <span class="${g.status === 'active' ? 'ember' : ''}">${esc(g.status)}</span></p>
+    <p class="sub">${esc(timeframeLabel(g))} ${statusChip(g)}</p>
+    ${needsReview(g) ? reviewCard(g) : ''}
     ${g.description ? `<p style="margin:10px 2px 0">${esc(g.description)}</p>` : ''}
     ${el ? `<div style="margin-top:14px"><div class="bar ash"><i style="width:${el.p * 100}%"></i></div><div class="muted small" style="margin-top:5px">Day ${el.day} of ${el.total} · ${Math.round(el.p * 100)}% of the time used</div></div>` : ''}
     <div class="sec"><h2>Effort vs outcome</h2></div>
@@ -792,7 +834,7 @@ function viewGoal(id) {
 
   html += `<div class="sec"><h2>Linked habits</h2></div>`;
   html += hs.length ? `<div class="card hbars">${hs.map(h => {
-    const r = rate([h], goalFrom(g), Math.min(goalTo(g) ?? t, t));
+    const r = rate([h], goalFrom(g), goalTo(g) ?? Infinity);
     return `<a class="hb" href="#/habit/${h.id}" style="display:block"><div class="top"><span>${esc(h.name)}${h.archived ? ' <span class="muted">(archived)</span>' : ''}</span><span>${pct(r)} · ${habitStreak(h)}${streakUnit(h)}</span></div><div class="bar"><i style="width:${(r || 0) * 100}%"></i></div></a>`;
   }).join('')}</div>` : `<div class="card muted small">No habits linked yet. Link habits from the goal editor or a habit's editor.</div>`;
 
@@ -821,7 +863,7 @@ function effortOutcomeChart(g, m) {
   let w0 = weekStart(from); const wEnd = weekStart(Math.max(to, from));
   if ((wEnd - w0) / 7 > 25) w0 = wEnd - 25 * 7;
   const weeks = [];
-  for (let ws = w0; ws <= wEnd; ws += 7) weeks.push({ ws, r: rate(hs, Math.max(ws, from), Math.min(ws + 6, to)) });
+  for (let ws = w0; ws <= wEnd; ws += 7) weeks.push({ ws, r: rate(hs, Math.max(ws, from), Math.min(ws + 6, goalTo(g) ?? Infinity)) });
   const logs = m ? logsOf(m).map(l => ({ n: dnum(localDateStr(new Date(l.logged_at))), v: +l.value })) : [];
   let x0 = w0, x1 = wEnd + 7;
   if (logs.length) { x0 = Math.min(x0, logs[0].n); x1 = Math.max(x1, logs[logs.length - 1].n + 1); }
@@ -883,9 +925,9 @@ function viewInsights() {
   html += `</div>`;
 
   // By goal
-  const byGoal = S.goals.filter(g => g.status !== 'archived').map(g => ({ label: g.title, v: rate(linkedHabits(g).filter(h => !h.archived), from, to) })).filter(x => x.v !== null);
+  const byGoal = S.goals.filter(g => g.status !== 'archived').map(g => ({ label: g.title, v: rate(linkedHabits(g).filter(h => !h.archived), from, to, to) })).filter(x => x.v !== null);
   const unlinked = hs.filter(h => !goalIdsOf(h).length);
-  const ur = rate(unlinked, from, to);
+  const ur = rate(unlinked, from, to, to);
   if (ur !== null) byGoal.push({ label: 'No goal', v: ur, ash: true });
   html += `<div class="sec"><h2>By goal</h2></div><div class="card">${byGoal.length ? hbars(byGoal.sort((a, b) => b.v - a.v)) : '<p class="muted small">Link habits to goals to see this.</p>'}</div>`;
 
@@ -894,8 +936,8 @@ function viewInsights() {
   const minS = Math.min(...hs.map(hStart));
   for (let i = 5; i >= 0; i--) {
     const y = ty - (tm - i < 0 ? 1 : 0), m = (tm - i + 12) % 12;
-    const a = monthStart(y, m), b = Math.min(monthEnd(y, m), t - 1);
-    months.push({ label: fmtMonth(y, m), v: b < minS || a > b ? null : rate(hs, a, b) });
+    const a = monthStart(y, m), b = monthEnd(y, m);
+    months.push({ label: fmtMonth(y, m), v: b < minS || a > t - 1 ? null : rate(hs, a, b, t - 1) });
   }
   const mv = months.filter(x => x.v !== null);
   html += `<div class="sec"><h2>Month over month</h2></div><div class="card">${vbars(months.map((x, i) => ({ ...x, cls: i === months.length - 1 ? 'ember' : 'mid' })))}`;
@@ -906,21 +948,23 @@ function viewInsights() {
   html += `</div>`;
 
   // Habit ranking
-  const rank = hs.map(h => ({ label: h.name, v: rate([h], from, to) })).filter(x => x.v !== null).sort((a, b) => b.v - a.v);
+  const rank = hs.map(h => ({ label: h.name, v: rate([h], from, to, to) })).filter(x => x.v !== null).sort((a, b) => b.v - a.v);
   html += `<div class="sec"><h2>Habits</h2></div><div class="card">${rank.length ? hbars(rank.map(x => ({ ...x, ash: x.v < 0.5 }))) : '<p class="muted small">No finished days yet.</p>'}</div>`;
   return html;
 }
 
 /* ---------- Settings / management ---------- */
 function viewSettings() {
-  const habits = S.habits.filter(h => UI.showArchived || !h.archived);
-  const archivedCount = S.habits.filter(h => h.archived).length;
+  const live = S.habits.filter(isLive), finished = S.habits.filter(h => !h.archived && isFinished(h)), archived = S.habits.filter(h => h.archived);
+  const hrow = h => `<button class="row" style="width:100%;text-align:left" data-act="edit-habit" data-id="${h.id}"><div class="row-main"><div class="row-title">${esc(h.name)}</div><div class="row-meta">${esc(cadenceLabel(h))}${h.type === 'quantity' ? ` · ${fmtNum(h.target_value)} ${esc(h.unit || '')}` : ''}${h.end_date ? ` · ${isFinished(h) ? 'ended' : 'until'} ${esc(fmtDay(hEnd(h)))}` : ''}${goalIdsOf(h).length ? ' · ' + goalIdsOf(h).map(id => esc(goalById(id)?.title || '')).join(', ') : ''}</div></div><span class="chev">›</span></button>`;
   return `<h1 class="page">Manage</h1><p class="sub">${esc(S.user.email || '')}</p>
     <div class="sec"><h2>Habits</h2><button class="act" data-act="new-habit">+ New</button></div>
-    ${habits.length ? `<div class="list">${habits.map(h => `<button class="row" style="width:100%;text-align:left" data-act="edit-habit" data-id="${h.id}"><div class="row-main"><div class="row-title">${esc(h.name)}${h.archived ? ' <span class="chip">archived</span>' : ''}</div><div class="row-meta">${esc(cadenceLabel(h))}${h.type === 'quantity' ? ` · ${fmtNum(h.target_value)} ${esc(h.unit || '')}` : ''}${goalIdsOf(h).length ? ' · ' + goalIdsOf(h).map(id => esc(goalById(id)?.title || '')).join(', ') : ''}</div></div><span class="chev">›</span></button>`).join('')}</div>` : `<div class="card muted small">No habits yet.</div>`}
-    ${archivedCount ? `<button class="linkbtn" data-act="toggle-archived">${UI.showArchived ? 'Hide' : 'Show'} archived (${archivedCount})</button>` : ''}
+    ${live.length ? `<div class="list">${live.map(hrow).join('')}</div>` : `<div class="card muted small">No active habits.</div>`}
+    ${finished.length ? `<div class="sec"><h2>Finished</h2></div><div class="list">${finished.map(hrow).join('')}</div>` : ''}
+    ${archived.length ? `<button class="linkbtn" data-act="toggle-archived">${UI.showArchived ? 'Hide' : 'Show'} archived (${archived.length})</button>` : ''}
+    ${UI.showArchived && archived.length ? `<div class="list">${archived.map(hrow).join('')}</div>` : ''}
     <div class="sec"><h2>Goals</h2><button class="act" data-act="new-goal">+ New</button></div>
-    ${S.goals.length ? `<div class="list">${S.goals.map(g => `<button class="row" style="width:100%;text-align:left" data-act="edit-goal" data-id="${g.id}"><div class="row-main"><div class="row-title">${esc(g.title)} ${g.status !== 'active' ? `<span class="chip">${esc(g.status)}</span>` : ''}</div><div class="row-meta">${esc(timeframeLabel(g))}${metricsOf(g).length ? ' · ' + plural(metricsOf(g).length, 'metric') : ''}</div></div><span class="chev">›</span></button>`).join('')}</div>` : `<div class="card muted small">No goals yet.</div>`}
+    ${S.goals.length ? `<div class="list">${S.goals.map(g => `<button class="row" style="width:100%;text-align:left" data-act="edit-goal" data-id="${g.id}"><div class="row-main"><div class="row-title">${esc(g.title)} ${statusChip(g)}</div><div class="row-meta">${esc(timeframeLabel(g))}${metricsOf(g).length ? ' · ' + plural(metricsOf(g).length, 'metric') : ''}</div></div><span class="chev">›</span></button>`).join('')}</div>` : `<div class="card muted small">No goals yet.</div>`}
     <div class="sec"><h2>Reminders</h2></div>
     <div class="card" id="push-card"><span class="muted small">Checking…</span></div>
     <div class="sec"><h2>App</h2></div>
@@ -981,8 +1025,10 @@ function habitEditor(h) {
     <p class="hint cad cad-n_per_week ${cad === 'n_per_week' ? '' : 'hidden'}">Weekly habits get their own counter and stay out of the perfect-day streak.</p>
     <label class="field"><span>Start date</span><input type="date" name="start" value="${dstr(startN)}" max="${dstr(todayN())}"></label>
     <p class="hint">Scheduling and streaks count from this day. Set it in the past to back-fill.</p>
+    <label class="field"><span>End date (optional)</span><input type="date" name="end" value="${h?.end_date || ''}"></label>
+    <p class="hint">Leave empty to keep it going. After this day it stops being due and moves to “Finished” in Manage, with its history.</p>
     ${goals.length ? `<div class="field"><span>Serves goals</span><div class="chips" data-multi="goals">${goals.map(g => `<button type="button" class="chip ${linked.includes(g.id) ? 'on' : ''}" data-v="${g.id}">${esc(g.title)}</button>`).join('')}</div></div>` : ''}
-    ${h ? `<label class="toggle-row">Archived<input type="checkbox" name="archived" ${h.archived ? 'checked' : ''}></label>` : ''}
+    ${h ? `<label class="toggle-row">Archived<input type="checkbox" name="archived" ${h.archived ? 'checked' : ''}></label><p class="hint">Archiving pauses or retires it: hidden from Today, reminders and stats, history kept, can be undone. Delete removes it forever.</p>` : ''}
     <button class="btn" type="submit">${h ? 'Save' : 'Create habit'}</button>
     ${h ? `<button class="btn danger" type="button" style="margin-top:10px" data-act="delete-habit" data-id="${h.id}">Delete habit and its history</button>` : ''}
   </form>`, async f => {
@@ -997,6 +1043,8 @@ function habitEditor(h) {
     const row = { name, type, target_value: type === 'quantity' ? target : null, unit: type === 'quantity' ? (f.unit.value.trim() || null) : null, cadence_type: cad, cadence_config };
     if (h) row.archived = f.archived.checked;
     const newStart = f.start.value ? dnum(f.start.value) : startN;
+    row.end_date = f.end.value || null;
+    if (row.end_date && dnum(row.end_date) < newStart) { toast('End date is before the start date'); return false; }
     if (!h ? newStart !== todayN() : newStart !== startN) row.created_at = noonISO(newStart);
     const saved = h
       ? await db(sb.from('habits').update(row).eq('id', h.id).select().single())
@@ -1013,15 +1061,17 @@ function habitEditor(h) {
 }
 
 /* ---------- Goal editor ---------- */
-function periodFor(kind) {
-  const d = new Date(), y = d.getFullYear();
-  if (kind === 'yearly') return [`${y}-01-01`, `${y}-12-31`];
-  if (kind === 'quarterly') { const q = Math.floor(d.getMonth() / 3); return [dstr(monthStart(y, q * 3)), dstr(monthEnd(y, q * 3 + 2))]; }
-  return null;
+/** Yearly = start + 1 year − 1 day (Jan 1 → Dec 31); quarterly = start + 3 months − 1 day. */
+function endFor(kind, start) {
+  const months = { yearly: 12, quarterly: 3 }[kind];
+  if (!months || !start) return null;
+  const [y, m, d] = start.split('-').map(Number);
+  return dstr(Math.round(Date.UTC(y, m - 1 + months, d) / DAY) - 1);
 }
 function goalEditor(g) {
   const kind = g?.timeframe_type || 'quarterly';
-  const [ds, de] = g ? [g.start_date || '', g.end_date || ''] : periodFor(kind);
+  const ds = g ? (g.start_date || '') : dstr(todayN());
+  const de = endFor(kind, ds) ?? (g?.end_date || '');
   const linked = g ? linkedHabits(g).map(h => h.id) : [];
   const habits = S.habits.filter(h => !h.archived || linked.includes(h.id));
   const ms = g ? metricsOf(g) : [];
@@ -1029,8 +1079,9 @@ function goalEditor(g) {
     <label class="field"><span>Goal</span><input name="title" required maxlength="200" value="${esc(g?.title || '')}" placeholder="Run a sub-25 5k"></label>
     <label class="field"><span>Why / notes (optional)</span><textarea name="description" maxlength="2000">${esc(g?.description || '')}</textarea></label>
     <div class="field"><span>Timeframe</span><div class="seg" data-name="timeframe" data-act-change="timeframe">${['yearly', 'quarterly', 'custom'].map(k => `<button type="button" data-v="${k}" class="${k === kind ? 'on' : ''}">${k[0].toUpperCase() + k.slice(1)}</button>`).join('')}</div></div>
-    <div class="grid2"><label class="field"><span>Start</span><input type="date" name="start_date" value="${ds}"></label><label class="field"><span>End</span><input type="date" name="end_date" value="${de}"></label></div>
-    ${g ? `<label class="field"><span>Status</span><select name="status">${['active', 'completed', 'archived'].map(s => `<option value="${s}" ${s === g.status ? 'selected' : ''}>${s[0].toUpperCase() + s.slice(1)}</option>`).join('')}</select></label>` : ''}
+    <div class="grid2"><label class="field"><span>Start</span><input type="date" name="start_date" value="${ds}"></label><label class="field"><span>End</span><input type="date" name="end_date" value="${de}" ${kind === 'custom' ? '' : 'readonly'}></label></div>
+    <p class="hint" id="tf-hint">${kind === 'custom' ? 'Pick both dates.' : 'End date follows the start date.'}</p>
+    ${g ? `<label class="field"><span>Status</span><select name="status">${['active', 'completed', 'missed', 'archived'].map(s => `<option value="${s}" ${s === g.status ? 'selected' : ''}>${STATUS_LABEL[s]}</option>`).join('')}</select></label>` : ''}
     ${habits.length ? `<div class="field"><span>Habits that serve it</span><div class="chips" data-multi="habits">${habits.map(h => `<button type="button" class="chip ${linked.includes(h.id) ? 'on' : ''}" data-v="${h.id}">${esc(h.name)}</button>`).join('')}</div></div>` : ''}
     ${g ? `<div class="field"><span>Metrics</span>${ms.map(m => `<div class="mlog"><span>${esc(m.name)} <span class="muted small">${esc(m.unit || '')}</span></span><button type="button" class="linkbtn" data-act="edit-metric" data-id="${m.id}">Edit</button></div>`).join('') || '<div class="muted small">None</div>'}<button type="button" class="linkbtn" data-act="new-metric" data-id="${g.id}">+ Add metric</button></div>`
       : `<fieldset class="fs"><legend>Track an outcome (optional)</legend>
@@ -1043,7 +1094,9 @@ function goalEditor(g) {
     ${g ? `<button class="btn danger" type="button" style="margin-top:10px" data-act="delete-goal" data-id="${g.id}">Delete goal</button>` : ''}
   </form>`, async f => {
     const title = f.title.value.trim(); if (!title) { toast('Name the goal'); return false; }
-    const row = { title, description: f.description.value.trim() || null, timeframe_type: segVal(f, 'timeframe'), start_date: f.start_date.value || null, end_date: f.end_date.value || null };
+    const tf = segVal(f, 'timeframe');
+    if (tf !== 'custom' && !f.start_date.value) { toast('Pick a start date'); return false; }
+    const row = { title, description: f.description.value.trim() || null, timeframe_type: tf, start_date: f.start_date.value || null, end_date: endFor(tf, f.start_date.value) ?? (f.end_date.value || null) };
     if (row.start_date && row.end_date && row.end_date < row.start_date) { toast('End date is before start date'); return false; }
     if (g) row.status = f.status.value;
     const saved = g
@@ -1248,6 +1301,11 @@ const ACT = {
     closeSheet(); commit();
   },
   'goal-filter': el => { UI.goalFilter = el.dataset.v; render(); },
+  'goal-outcome': async el => {
+    const saved = await db(sb.from('goals').update({ status: el.dataset.v }).eq('id', el.dataset.id).select().single());
+    S.goals = S.goals.map(x => x.id === saved.id ? saved : x); commit();
+    toast(el.dataset.v === 'completed' ? 'Nice — marked completed' : 'Marked as missed');
+  },
   'ins-win': el => { UI.insWin = +el.dataset.v; render(); },
   'toggle-archived': () => { UI.showArchived = !UI.showArchived; render(); },
   'push-on': () => enablePush(),
@@ -1276,7 +1334,7 @@ document.addEventListener('click', e => {
     $$('button', segBtn.parentElement).forEach(b => b.classList.toggle('on', b === segBtn));
     const form = segBtn.closest('form');
     if (segBtn.parentElement.dataset.name === 'type') $('.show-quantity', form)?.classList.toggle('hidden', segBtn.dataset.v !== 'quantity');
-    if (segBtn.parentElement.dataset.name === 'timeframe') { const p = periodFor(segBtn.dataset.v); if (p) { form.start_date.value = p[0]; form.end_date.value = p[1]; } }
+    if (segBtn.parentElement.dataset.name === 'timeframe') syncGoalEnd(form);
     return;
   }
   const chip = e.target.closest('.chips[data-multi] .chip');
@@ -1289,6 +1347,7 @@ document.addEventListener('click', e => {
   if (el && ACT[el.dataset.act]) { e.preventDefault(); ACT[el.dataset.act](el, e); }
 });
 document.addEventListener('change', async e => {
+  if (e.target.name === 'start_date' && e.target.form?.end_date) syncGoalEnd(e.target.form);
   if (e.target.name === 'cadence_type') {
     const f = e.target.form;
     $$('.cad', f).forEach(x => x.classList.toggle('hidden', !x.classList.contains('cad-' + e.target.value)));
@@ -1299,7 +1358,7 @@ document.addEventListener('change', async e => {
     if (sub) { await saveSubscription(sub).catch(() => {}); toast(`Reminder set for ${pad(+e.target.value)}:00`); }
   }
 });
-window.addEventListener('hashchange', () => { render(); window.scrollTo(0, 0); });
+window.addEventListener('hashchange', () => { render(); $('#scroller').scrollTop = 0; });
 window.addEventListener('online', () => { flush(); refresh(); });
 window.addEventListener('offline', () => setSync('offline'));
 let lastDay = todayN();

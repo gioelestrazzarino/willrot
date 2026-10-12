@@ -60,7 +60,7 @@ function localParts(tz: string, at = new Date()) {
 
 type Habit = {
   id: string; name: string; type: "boolean" | "quantity"; target_value: number | null;
-  cadence_type: string; cadence_config: Record<string, unknown>; created_at: string;
+  cadence_type: string; cadence_config: Record<string, unknown>; created_at: string; end_date: string | null;
 };
 type Log = { habit_id: string; date: string; completed: boolean; value: number | null };
 
@@ -90,6 +90,7 @@ function pendingToday(habits: Habit[], logs: Log[], tz: string, today: string) {
   const byKey = new Map(logs.map((l) => [`${l.habit_id}|${l.date}`, l]));
   const out: string[] = [];
   for (const h of habits) {
+    if (h.end_date && h.end_date < today) continue; // finished habit
     const start = dnum(localParts(tz, new Date(h.created_at)).date);
     if (h.cadence_type === "n_per_week") {
       // Only nag when the remaining days this week are just enough to hit N.
@@ -167,7 +168,7 @@ Deno.serve(async (req) => {
     let data = habitCache.get(s.user_id);
     if (!data) {
       const { data: habits } = await admin.from("habits")
-        .select("id,name,type,target_value,cadence_type,cadence_config,created_at")
+        .select("id,name,type,target_value,cadence_type,cadence_config,created_at,end_date")
         .eq("user_id", s.user_id).eq("archived", false);
       const ids = (habits ?? []).map((h) => h.id);
       const from = dstr(weekStart(dnum(today)) - 1);
